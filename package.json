@@ -1,5 +1,21 @@
 {
+  "name": "amin_backend",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "build:css": "tailwindcss -i ./src/public/main.css -o ./src/public/output.css --watch"
+  },
+  "author": "",
   "dependencies": {
-    "express": "^5.1.0"
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "pg": "^8.14.1",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "prisma": "^6.6.0"
   }
 }
