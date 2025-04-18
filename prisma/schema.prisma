@@ -25,16 +25,16 @@ model User {
 }
 
 model UserCompany {
-  id Int @id @default(autoincrement())
-
-  product   User @relation(fields: [productId], references: [id])
-  productId Int
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
 
   company   Company @relation(fields: [companyId], references: [id])
   companyId Int
 
-  rool      String  @default("asesor")
+  role      String  @default("asesor")
   avaliable Boolean @default(true)
+
+  @@id([userId, companyId])
 }
 
 model Company {
@@ -55,7 +55,7 @@ model Company {
 }
 
 model Account {
-  id        Int      @id @default(autoincrement())
+  id        String      @id @default(uuid())
   type      String
   price     Float
   const     Boolean
@@ -65,17 +65,17 @@ model Account {
 }
 
 model Product {
-  id            Int       @id @default(autoincrement())
+  id            String       @id @default(uuid())
   name          String
-  barcode       String
-  description   String
-  imgUrl        String
+  barcode       String?
+  description   String?
+  imgUrl        String?
   price_cost    Float
   price_selling Float
-  stock_minimo  Int
-  stock         Int
+  stock_minimo  Int?
+  stock         Int?
   avaliable     Boolean @default(true)
-  detail        Json
+  detail        Json?
   createAt      DateTime  @default(now())
   is_favorite   Boolean   @default(false)
   categoryId    Int?
@@ -89,9 +89,10 @@ model Product {
 model ProductOrder {
   id     Int    @id @default(autoincrement())
   status String
+  quantity Int
   notes  String
 
-  productId Int
+  productId String
   product   Product @relation(fields: [productId], references: [id])
 
   orderId Int
