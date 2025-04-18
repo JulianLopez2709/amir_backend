@@ -13,3 +13,104 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model User {
+  id        Int           @id @default(autoincrement())
+  name      String
+  email     String
+  username  String        @unique
+  password  String
+  telefon   String
+  createdAt DateTime      @default(now())
+  companies UserCompany[]
+}
+
+model UserCompany {
+  id Int @id @default(autoincrement())
+
+  product   User @relation(fields: [productId], references: [id])
+  productId Int
+
+  company   Company @relation(fields: [companyId], references: [id])
+  companyId Int
+
+  rool   String @default("asesor")
+  avaliable Boolean @default(true)
+}
+
+model Company {
+  id              Int           @id @default(autoincrement())
+  name            String
+  slogan          String
+  logo            String
+  type            String
+  plan            String
+  primary_color   String
+  secondary_color String
+  avalable        Boolean
+  createdAt       DateTime      @default(now())
+  users           UserCompany[]
+  products        Product[]
+  orders          Order[]
+  accunts         Account[]
+}
+
+model Account {
+  id        Int      @id @default(autoincrement())
+  type      String
+  price     Float
+  const     Boolean
+  date      DateTime @default(now())
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id])
+}
+
+model Product {
+  id            Int       @id @default(autoincrement())
+  name          String
+  barcode       String
+  description   String
+  imgUrl        String
+  price_cost    Float
+  price_selling Float
+  stock_minimo  Int
+  stock         Int
+  avaliable     Boolean
+  detail        Json
+  createAt      DateTime  @default(now())
+  is_favorite   Boolean   @default(false)
+  categoryId    Int?
+  category      Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  companyId Int
+  company   Company        @relation(fields: [companyId], references: [id])
+  orders    ProductOrder[]
+}
+
+model ProductOrder {
+  id     Int    @id @default(autoincrement())
+  status String
+  notes  String
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+
+  orderId Int
+  order   Order @relation(fields: [orderId], references: [id])
+}
+
+model Order {
+  id          Int            @id @default(autoincrement())
+  status      String         @default("new")
+  total_price Float
+  createAt    DateTime       @default(now())
+  companyId   Int
+  company     Company        @relation(fields: [companyId], references: [id])
+  products    ProductOrder[]
+}
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String
+  products Product[]
+}
