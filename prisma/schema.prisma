@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -20,7 +19,7 @@ model User {
   email     String
   username  String        @unique
   password  String
-  telefon   String
+  phone   String
   createdAt DateTime      @default(now())
   companies UserCompany[]
 }
@@ -34,7 +33,7 @@ model UserCompany {
   company   Company @relation(fields: [companyId], references: [id])
   companyId Int
 
-  rool   String @default("asesor")
+  rool      String  @default("asesor")
   avaliable Boolean @default(true)
 }
 
@@ -47,7 +46,7 @@ model Company {
   plan            String
   primary_color   String
   secondary_color String
-  avalable        Boolean
+  avaliable        Boolean       @default(true)
   createdAt       DateTime      @default(now())
   users           UserCompany[]
   products        Product[]
@@ -75,7 +74,7 @@ model Product {
   price_selling Float
   stock_minimo  Int
   stock         Int
-  avaliable     Boolean
+  avaliable     Boolean @default(true)
   detail        Json
   createAt      DateTime  @default(now())
   is_favorite   Boolean   @default(false)
