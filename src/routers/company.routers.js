@@ -4,6 +4,6 @@ import { createCompany, getCompanyByUser } from "../controllers/company.controll
 const router = Router()
 
 router.post("/", createCompany)
-router.get("/", getCompanyByUser)
+router.get("/:userId", getCompanyByUser)
 
 export default router

@@ -27,7 +27,7 @@ export const getCompanyByUserService = async(userId) => {
             where: {
                 users: {
                     some: {
-                        userId: userId,
+                        userId: parseInt(userId),
                     },
                 },
             },

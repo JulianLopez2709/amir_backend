@@ -18,7 +18,7 @@ export const createProductService = async (name, barcode, description, imgUrl, p
     }
 }
 
-export const getProductsByUserService = async (companyId) => {
+export const getProductsByCompanyService = async (companyId) => {
     try {
         const products = await prisma.product.findMany({
             where: {
