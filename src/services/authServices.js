@@ -9,7 +9,6 @@ export const CreateUser = async (email, password, username, name , phone) => {
         data: { email, password: hashedPassword, username, name, phone },
     });
 
-    console.log(user);
 
     return user;
 }

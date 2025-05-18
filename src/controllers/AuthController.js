@@ -19,10 +19,11 @@ export const registerUser = async (req, res) => {
 }
 
 export const login = async (req, res) => {
+
     const { email, password } = req.body;
 
     const user = await prisma.user.findUnique(
-        { where: { email }, include: { companies: true } },
+        { where: {email }, include: { companies: true } },
     );
     if (!user) return res.status(401).json({ error: 'Credenciales inválidas' });
 
@@ -33,5 +34,5 @@ export const login = async (req, res) => {
         expiresIn: process.env.JWT_EXPIRES_IN,
     });
 
-    res.status(200).json({ token, user: { id: user.id, email: user.email, name: user.name }, companies: user.companies });  
+    res.status(200).json({ token, user: { id: user.id, email: user.email, name: user.name }, companies: user.companies });
 }
