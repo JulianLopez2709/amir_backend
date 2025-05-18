@@ -4,6 +4,8 @@ import cors from 'cors'
 import routerUser from './routers/user.routers.js'
 import { authenticateToken } from './middleware/auth.js';
 import routerCompany from './routers/company.routers.js'
+import routerProduct from './routers/product.routers.js'
+import routerOrden from './routers/order.routers.js'
 import prisma from './config/db.js';
 import router from './routers/auth.js';
 

@@ -1,4 +1,4 @@
-import prisma from "../config/prisma.js"
+import prisma from "../config/db.js"
 
 
 export const createProductService = async ({name, barcode, description, imgUrl, price_cost, price_selling, stock_minimo, stock, avaliable, detail, companyId}) => {
