@@ -23,7 +23,7 @@ interface ProductCreate {
 }*/
 export const createProduct = async (req, res) => {
     try {
-        const { name, barcode=null, description, imgUrl = null, price_cost, price_selling, stock_minimo=null, stock = null, avaliable = true, detail = {}, companyId } = req.body
+        const { name, barcode="", description, imgUrl = "", price_cost, price_selling, stock_minimo=0, stock = 0, avaliable = true, detail = {}, companyId } = req.body
         const newProduct = await createProductService({name, barcode, description, imgUrl, price_cost, price_selling, stock_minimo, stock, avaliable, detail, companyId})
         res.status(201).send(newProduct)
     } catch (error) {
