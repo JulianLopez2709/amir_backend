@@ -1,7 +1,7 @@
 import prisma from "../config/prisma.js"
 
 
-export const createProductService = async (name, barcode, description, imgUrl, price_cost, price_selling, stock_minimo, stock, avaliable, detail, companyId) => {
+export const createProductService = async ({name, barcode, description, imgUrl, price_cost, price_selling, stock_minimo, stock, avaliable, detail, companyId}) => {
     try {
         const newProduct = await prisma.product.create({
             data: {

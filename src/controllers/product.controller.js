@@ -1,10 +1,31 @@
+import { type } from "os"
 import { createProductService, getProductsByCompanyService } from "../services/product.services.js"
 
+/*
+interface ProductCreate {
+    type: TypeProduct,
+    name: string,
+    description: string,
+    price_selling: number,
+    price_cost: number,
+    stock?: number,
+    imgUrl?: string,
+    barcode?: number,
+    stock_minimo?: number,
+    avaliable?: boolean,
+    is_favorite?: boolean,
+    categoryId?: number,
+    companyId: number
+
+    //"detail" ?: {},
+    //"createAt": "2025-04-19T01:43:38.083Z",
+
+}*/
 export const createProduct = async (req, res) => {
     try {
-        const { name, barcode, description, imgUrl, price_cost, price_selling, stock_minimo, stock, avaliable, detail, companyId } = req.body
-        const newProduct = await createProductService(name, barcode, description, imgUrl, price_cost, price_selling, stock_minimo, stock, avaliable, detail, companyId)
-        res.status(201).send(newProduct )
+        const { name, barcode=null, description, imgUrl = null, price_cost, price_selling, stock_minimo=null, stock = null, avaliable = true, detail = {}, companyId } = req.body
+        const newProduct = await createProductService({name, barcode, description, imgUrl, price_cost, price_selling, stock_minimo, stock, avaliable, detail, companyId})
+        res.status(201).send(newProduct)
     } catch (error) {
         res.status(400).send(error.message)
         
