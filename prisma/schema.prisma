@@ -27,8 +27,8 @@ model User {
 model UserCompany {
   id Int @id @default(autoincrement())
 
-  product   User @relation(fields: [productId], references: [id])
-  productId Int
+  user User @relation(fields: [userId], references: [id])
+  userId Int
 
   company   Company @relation(fields: [companyId], references: [id])
   companyId Int
