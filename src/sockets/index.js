@@ -3,7 +3,8 @@ import { Server } from "socket.io";
 export function setupWebSocket(server) {
     const io = new Server(server, {
         cors: {
-            origin: "*"
+            origin: "*",
+            credentials: true,
         }
     })
 

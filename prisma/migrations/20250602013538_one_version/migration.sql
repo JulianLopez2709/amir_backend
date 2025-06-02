@@ -5,7 +5,7 @@ CREATE TABLE "User" (
     "email" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "password" TEXT NOT NULL,
-    "telefon" TEXT NOT NULL,
+    "phone" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
@@ -14,9 +14,9 @@ CREATE TABLE "User" (
 -- CreateTable
 CREATE TABLE "UserCompany" (
     "id" SERIAL NOT NULL,
-    "productId" INTEGER NOT NULL,
+    "userId" INTEGER NOT NULL,
     "companyId" INTEGER NOT NULL,
-    "rool" TEXT NOT NULL DEFAULT 'asesor',
+    "role" TEXT NOT NULL DEFAULT 'asesor',
     "avaliable" BOOLEAN NOT NULL DEFAULT true,
 
     CONSTRAINT "UserCompany_pkey" PRIMARY KEY ("id")
@@ -32,7 +32,7 @@ CREATE TABLE "Company" (
     "plan" TEXT NOT NULL,
     "primary_color" TEXT NOT NULL,
     "secondary_color" TEXT NOT NULL,
-    "avalable" BOOLEAN NOT NULL,
+    "avaliable" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Company_pkey" PRIMARY KEY ("id")
@@ -40,7 +40,7 @@ CREATE TABLE "Company" (
 
 -- CreateTable
 CREATE TABLE "Account" (
-    "id" SERIAL NOT NULL,
+    "id" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "price" DOUBLE PRECISION NOT NULL,
     "const" BOOLEAN NOT NULL,
@@ -52,17 +52,17 @@ CREATE TABLE "Account" (
 
 -- CreateTable
 CREATE TABLE "Product" (
-    "id" SERIAL NOT NULL,
+    "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "barcode" TEXT NOT NULL,
-    "description" TEXT NOT NULL,
-    "imgUrl" TEXT NOT NULL,
+    "barcode" TEXT,
+    "description" TEXT,
+    "imgUrl" TEXT,
     "price_cost" DOUBLE PRECISION NOT NULL,
     "price_selling" DOUBLE PRECISION NOT NULL,
-    "stock_minimo" INTEGER NOT NULL,
-    "stock" INTEGER NOT NULL,
-    "avaliable" BOOLEAN NOT NULL,
-    "detail" JSONB NOT NULL,
+    "stock_minimo" INTEGER,
+    "stock" INTEGER,
+    "avaliable" BOOLEAN NOT NULL DEFAULT true,
+    "detail" JSONB,
     "createAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "is_favorite" BOOLEAN NOT NULL DEFAULT false,
     "categoryId" INTEGER,
@@ -75,16 +75,17 @@ CREATE TABLE "Product" (
 CREATE TABLE "ProductOrder" (
     "id" SERIAL NOT NULL,
     "status" TEXT NOT NULL,
+    "quantity" INTEGER NOT NULL,
     "notes" TEXT NOT NULL,
-    "productId" INTEGER NOT NULL,
-    "orderId" INTEGER NOT NULL,
+    "productId" TEXT NOT NULL,
+    "orderId" TEXT NOT NULL,
 
     CONSTRAINT "ProductOrder_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Order" (
-    "id" SERIAL NOT NULL,
+    "id" TEXT NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'new',
     "total_price" DOUBLE PRECISION NOT NULL,
     "createAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -102,10 +103,13 @@ CREATE TABLE "Category" (
 );
 
 -- CreateIndex
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
 
 -- AddForeignKey
-ALTER TABLE "UserCompany" ADD CONSTRAINT "UserCompany_productId_fkey" FOREIGN KEY ("productId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "UserCompany" ADD CONSTRAINT "UserCompany_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "UserCompany" ADD CONSTRAINT "UserCompany_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

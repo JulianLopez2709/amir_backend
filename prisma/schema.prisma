@@ -95,12 +95,12 @@ model ProductOrder {
   productId String
   product   Product @relation(fields: [productId], references: [id])
 
-  orderId Int
+  orderId String
   order   Order @relation(fields: [orderId], references: [id])
 }
 
 model Order {
-  id          Int            @id @default(autoincrement())
+  id          String            @id @default(uuid())
   status      String         @default("new")
   total_price Float
   createAt    DateTime       @default(now())
