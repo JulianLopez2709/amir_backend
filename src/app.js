@@ -11,7 +11,18 @@ import router from './routers/auth.js';
 
 const app = express()
 app.use(express.json())
-app.use(cors({origin: process.env.CORS_ORIGIN || 'http://localhost:5173', credentials: true}));
+const corsOriginEnv = process.env.CORS_ORIGIN;
+
+// Divide la cadena en un array de dominios.
+const allowedOrigins = corsOriginEnv
+  ? corsOriginEnv.split(',')
+  : ['http://localhost:5173'];
+
+app.use(cors({
+  origin: allowedOrigins, 
+  credentials: true,
+}));
+
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/order", routerOrden)

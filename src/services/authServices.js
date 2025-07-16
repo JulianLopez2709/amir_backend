@@ -43,7 +43,9 @@ export const loginService = async (identifier, password) => {
             secondary_color: userCompany.company.secondary_color,
         }))
 
-        const token = jwt.sign({ userId: user.id, email: user.email, name: user.name, }, process.env.JWT_SECRET, {
+        console.log("first company id" , user.companies[0].company.id)
+
+        const token = jwt.sign({ userId: user.id, email: user.email, name: user.name, companyId : user.companies[0].company.id}, process.env.JWT_SECRET, {
             expiresIn: process.env.JWT_EXPIRES_IN,
         });
 

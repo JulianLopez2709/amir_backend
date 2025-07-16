@@ -13,6 +13,7 @@ export const createProductService = async ({name, barcode, description, imgUrl, 
         })
         return newProduct
     } catch (error) {
+        console.log(error)
         throw error
         
     }

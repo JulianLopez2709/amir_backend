@@ -1,9 +1,13 @@
 import { createOrderService, getOrdersByCompanyService } from "../services/order.services.js"
+import io from '../server.js'
 
 export const createOrder = async (req, res) => {
     const { companyId, total_price, products } = req.body
     try {
         const newOrder = await createOrderService(companyId, total_price, products)
+        if(newOrder){
+            io.to(companyId).emit("newOrder", newOrder)
+        }
         res.status(201).send(newOrder)
     } catch (error) {
         res.status(400).send(error.message)

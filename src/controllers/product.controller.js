@@ -1,6 +1,5 @@
-import { type } from "os"
 import { createProductService, getProductsByCompanyService } from "../services/product.services.js"
-
+import io from '../server.js'
 /*
 interface ProductCreate {
     type: TypeProduct,
@@ -23,12 +22,12 @@ interface ProductCreate {
 }*/
 export const createProduct = async (req, res) => {
     try {
-        const { name, barcode="", description, imgUrl = "", price_cost, price_selling, stock_minimo=0, stock = 0, avaliable = true, detail = {}, companyId } = req.body
+        const { name, barcode="", description, imgUrl = "", price_cost=0, price_selling=0, stock_minimo=0, stock = 0, avaliable = true, detail = {}, companyId } = req.body
         const newProduct = await createProductService({name, barcode, description, imgUrl, price_cost, price_selling, stock_minimo, stock, avaliable, detail, companyId})
+        io.to(companyId).emit('newProduct', newProduct)
         res.status(201).send(newProduct)
     } catch (error) {
         res.status(400).send(error.message)
-        
     }
 }
 
