@@ -33,12 +33,16 @@ export const getOrdersByCompanyService = async (companyId) => {
                 companyId: parseInt(companyId),
             },
             include: {
-                products: true,
+                 products: {         
+                    include: {
+                        product: true   
+                    }
+                }
             }
         });
 
         if (orders.length === 0) {
-            throw new Error("No se encontraron órdenes para esta empresa");
+            return [];
         }
 
         return orders;
