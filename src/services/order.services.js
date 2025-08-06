@@ -33,9 +33,9 @@ export const getOrdersByCompanyService = async (companyId) => {
                 companyId: parseInt(companyId),
             },
             include: {
-                 products: {         
+                products: {
                     include: {
-                        product: true   
+                        product: true
                     }
                 }
             }
@@ -49,4 +49,41 @@ export const getOrdersByCompanyService = async (companyId) => {
     } catch (error) {
         throw error
     }
+}
+
+export const updateOrderStatusService = async (orderId, newStatus) => {
+    try {
+        const updatedOrder = await prisma.order.update({
+            where: {
+                id: orderId,
+            },
+            data: {
+                // 'status' es el campo que queremos cambiar.
+                status: newStatus,
+            },
+            include: {
+                // Incluimos los productos relacionados para enviar la orden completa y actualizada
+                // al frontend, manteniendo la consistencia de los datos.
+                products: {
+                    include: {
+                        product: true
+                    }
+                }
+            }
+        });
+
+        if (!updatedOrder) {
+            throw new Error('Orden no encontrada');
+        }
+
+        return updatedOrder;
+    } catch (error) {
+        if (error.code === 'P2025') {
+            throw new Error('Orden no encontrada');
+        }
+        // Lanza otros errores para depuración
+        throw error;
+    }
+
+
 }

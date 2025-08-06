@@ -1,4 +1,4 @@
-import { createOrderService, getOrdersByCompanyService } from "../services/order.services.js"
+import { createOrderService, getOrdersByCompanyService, updateOrderStatusService } from "../services/order.services.js"
 import io from '../server.js'
 
 export const createOrder = async (req, res) => {
@@ -23,3 +23,24 @@ export const getOrdesByCompany = async (req, res) => {
         res.status(400).send(error.message)
     }
 }
+
+
+export const updateOrderStatus = async (req, res) => {
+    const { orderId } = req.params;
+    const { status, companyId } = req.body;
+
+    if (!status || !companyId) {
+        return res.status(400).send('Faltan los campos "status" y "companyId"');
+    }
+
+    try {
+        const updatedOrder = await updateOrderStatusService(orderId, status);
+
+        io.to(companyId).emit('orderStatusChanged', updatedOrder);
+
+        res.status(200).send(updatedOrder);
+
+    } catch (error) {
+        res.status(404).send({ message: error.message });
+    }
+};
