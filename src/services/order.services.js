@@ -58,12 +58,9 @@ export const updateOrderStatusService = async (orderId, newStatus) => {
                 id: orderId,
             },
             data: {
-                // 'status' es el campo que queremos cambiar.
                 status: newStatus,
             },
             include: {
-                // Incluimos los productos relacionados para enviar la orden completa y actualizada
-                // al frontend, manteniendo la consistencia de los datos.
                 products: {
                     include: {
                         product: true
@@ -72,9 +69,6 @@ export const updateOrderStatusService = async (orderId, newStatus) => {
             }
         });
 
-        if (!updatedOrder) {
-            throw new Error('Orden no encontrada');
-        }
 
         return updatedOrder;
     } catch (error) {

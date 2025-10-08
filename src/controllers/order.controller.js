@@ -5,7 +5,7 @@ export const createOrder = async (req, res) => {
     const { companyId, total_price, products } = req.body
     try {
         const newOrder = await createOrderService(companyId, total_price, products)
-        if(newOrder){
+        if (newOrder) {
             io.to(companyId).emit("newOrder", newOrder)
         }
         res.status(201).send(newOrder)
@@ -27,9 +27,10 @@ export const getOrdesByCompany = async (req, res) => {
 
 export const updateOrderStatus = async (req, res) => {
     const { orderId } = req.params;
-    const { status, companyId } = req.body;
+    const { status, paymentMethod } = req.body;
+    const companyId = req.companyId;
 
-    if (!status || !companyId) {
+    if (!status) {
         return res.status(400).send('Faltan los campos "status" y "companyId"');
     }
 
