@@ -12,10 +12,25 @@ model User {
   name      String
   email     String        @unique
   username  String        @unique
+  plan      String        @default("basic")
   password  String
   phone     String
   createdAt DateTime      @default(now())
   companies UserCompany[]
+  notification UserNotification[]
+}
+
+model UserNotification {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  user       User      @relation(fields: [userId], references: [id])
+  title      String
+  message    String
+  type       String     // Ej: INVITATION, PLAN_ALERT, ROLE_CHANGE, SYSTEM
+  isRead     Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  readAt     DateTime?
+  metadata   Json?      // Información adicional, como { companyId: 2, sender: "Admin" }
 }
 
 model UserCompany {
@@ -46,6 +61,20 @@ model Company {
   orders          Order[]
   products        Product[]
   users           UserCompany[]
+  notification CompanyNotification[]
+}
+
+model CompanyNotification {
+  id          Int       @id @default(autoincrement())
+  companyId   Int
+  company     Company   @relation(fields: [companyId], references: [id])
+  title       String
+  message     String
+  type        String     // Ej: STOCK_ALERT, NEW_CLIENT, ORDER_LARGE, INTERNAL_NOTE
+  isRead      Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  readAt      DateTime?
+  metadata    Json?      // Ej: { productId: "xyz", orderId: "123" }
 }
 
 model Account {
@@ -95,6 +124,7 @@ model ProductOrder {
   orderId          String
   product_snapshot Json?
   subtotal         Float?
+  updatedAt   DateTime       @updatedAt
   order            Order                       @relation(fields: [orderId], references: [id])
   product          Product                     @relation(fields: [productId], references: [id])
   selectedOptions  ProductOrderVariantOption[]
@@ -106,6 +136,8 @@ model Order {
   total_price Float
   createAt    DateTime       @default(now())
   companyId   Int
+  detail Json?
+  updatedAt   DateTime       @updatedAt
   company     Company        @relation(fields: [companyId], references: [id])
   products    ProductOrder[]
 }
