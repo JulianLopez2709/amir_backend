@@ -1,32 +1,25 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db.js';
+import {generateToken} from '../middleware/auth.js';
 
 export const loginService = async (identifier, password) => {
     try {
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.findFirst({
             where: {
-                email: identifier,
+                OR: [{ email: identifier }, { username: identifier }]
             },
             include: {
                 companies: {
-                    select: {
-                        role: true,
-                        company: {
-                            select: {
-                                id: true,
-                                name: true,
-                                slogan: true,
-                                logo: true,
-                                type: true,
-                                primary_color: true,
-                                secondary_color: true,
-                            },
-                        },
-                    },
+                    include: { company: true }
                 },
-            },
-        })
+                notification: {
+                    where: { isRead: false },
+                    orderBy: { createdAt: "desc" }
+                }
+            }
+        });
+
 
         if (!user) throw new Error('User not found');
         const isPasswordValid = await bcrypt.compare(password, user.password)
@@ -34,7 +27,7 @@ export const loginService = async (identifier, password) => {
 
         const companies = user.companies.map(userCompany => ({
             id: userCompany.company.id,
-            role : userCompany.role,
+            role: userCompany.role,
             name: userCompany.company.name,
             slogan: userCompany.company.slogan,
             logo: userCompany.company.logo,
@@ -43,16 +36,57 @@ export const loginService = async (identifier, password) => {
             secondary_color: userCompany.company.secondary_color,
         }))
 
-        console.log("first company id" , user.companies[0].company.id)
 
-        const token = jwt.sign({ userId: user.id, email: user.email, name: user.name, companyId : user.companies[0].company.id}, process.env.JWT_SECRET, {
-            expiresIn: process.env.JWT_EXPIRES_IN,
-        });
+        const token = generateToken({ id: user.id });
 
-        return { token, user: { id: user.id, email: user.email, name: user.name }, companies: companies }
+        console.log(token)
+
+        return {
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                plan: user.plan
+            },
+            notifications: user.notification,
+            companies: user.companies.map(c => ({
+                id: c.company.id,
+                name: c.company.name,
+                role: c.role
+            })),
+            token : token
+        };
     } catch (error) {
         throw error
     }
+}
+
+export const selectCompanyService = async (userId, companyId) => {
+    const relation = await prisma.userCompany.findFirst({
+        where: { userId, companyId, available: true },
+        include: { company: true }
+    });
+
+    if (!relation) {
+        throw new Error("No tienes permiso para acceder a esta compañía");
+    }
+
+    // Genera nuevo token con companyId + role
+    const token = generateToken({
+        id: userId,
+        companyId: relation.companyId,
+        role: relation.role
+    });
+
+    return {
+        message: "Compañía seleccionada correctamente",
+        company: {
+            id: relation.company.id,
+            name: relation.company.name,
+            role: relation.role
+        },
+        token
+    };
 }
 
 export const CreateUser = async (email, password, username, name, phone) => {
