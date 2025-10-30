@@ -26,6 +26,7 @@ model UserNotification {
   user       User      @relation(fields: [userId], references: [id])
   title      String
   message    String
+  companyId Int?
   type       String     // Ej: INVITATION, PLAN_ALERT, ROLE_CHANGE, SYSTEM
   isRead     Boolean    @default(false)
   createdAt  DateTime   @default(now())
@@ -111,7 +112,7 @@ model Product {
   updatedAt     DateTime       @updatedAt
   company       Company        @relation(fields: [companyId], references: [id])
   orders        ProductOrder[]
-  stock_records Stock[]
+  stock_records Stock? 
   variants      Variant[]
 }
 
@@ -170,10 +171,10 @@ model ProductOrderVariantOption {
 
 model Stock {
   id        Int      @id @default(autoincrement())
-  productId String
+  productId String  @unique
   quantity  Int      @default(0)
   type      String?
   reference String?
   createdAt DateTime @default(now())
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product?  @relation(fields: [productId], references: [id])
 }
