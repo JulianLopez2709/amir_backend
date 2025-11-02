@@ -8,6 +8,7 @@ import routerProduct from './routers/product.routers.js'
 import routerOrden from './routers/order.routers.js'
 import prisma from './config/db.js';
 import router from './routers/auth.js';
+import routerStock from "./routers/stock.routers.js";
 
 const app = express()
 app.use(express.json())
@@ -27,6 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/order", routerOrden)
 app.use("/product", routerProduct)
+app.use("/stock", routerStock);
 app.use("/company", routerCompany)
 app.use("/user", routerUser)
 app.use("/auth", router);

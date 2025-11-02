@@ -1,10 +1,28 @@
 import { Router } from "express";
-import { createOrder, getOrdesByCompany, updateOrderStatus } from "../controllers/order.controller.js";
+import {
+  createOrder,
+  getOrdersByCompany,
+  getOrderDetail,
+  updateOrderStatus,
+} from "../controllers/order.controller.js";
 
-const router = Router()
+const router = Router();
 
-router.get("/:companyId", getOrdesByCompany)
-router.post("/", createOrder)
-router.patch('/:orderId/status', updateOrderStatus);
+// 🧾 Crear una nueva orden
+router.post("/", createOrder);
 
-export default router
+// 🧾 Obtener todas las órdenes de una compañía
+router.get("/company/:companyId", getOrdersByCompany);
+
+// 🧾 Obtener detalle completo de una orden
+router.get("/:orderId", getOrderDetail);
+
+// 🧾 Actualizar estado de una orden
+router.patch("/:orderId/status", updateOrderStatus);
+
+router.get("/company/:companyId", getOrdersByCompany);
+
+router.put("/:orderId/status", updateOrderStatus);
+
+
+export default router;
