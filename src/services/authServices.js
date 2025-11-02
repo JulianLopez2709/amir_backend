@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db.js';
-import {generateToken} from '../middleware/auth.js';
+import { generateToken } from '../middleware/auth.js';
 
 export const loginService = async (identifier, password) => {
     try {
@@ -25,22 +25,6 @@ export const loginService = async (identifier, password) => {
         const isPasswordValid = await bcrypt.compare(password, user.password)
         if (!isPasswordValid) throw new Error('Invalid password');
 
-        const companies = user.companies.map(userCompany => ({
-            id: userCompany.company.id,
-            role: userCompany.role,
-            name: userCompany.company.name,
-            slogan: userCompany.company.slogan,
-            logo: userCompany.company.logo,
-            type: userCompany.company.type,
-            primary_color: userCompany.company.primary_color,
-            secondary_color: userCompany.company.secondary_color,
-        }))
-
-
-        const token = generateToken({ id: user.id });
-
-        console.log(token)
-
         return {
             user: {
                 id: user.id,
@@ -51,10 +35,10 @@ export const loginService = async (identifier, password) => {
             notifications: user.notification,
             companies: user.companies.map(c => ({
                 id: c.company.id,
+                logo: c.company.logo,
                 name: c.company.name,
                 role: c.role
             })),
-            token : token
         };
     } catch (error) {
         throw error
@@ -62,21 +46,21 @@ export const loginService = async (identifier, password) => {
 }
 
 export const selectCompanyService = async (userId, companyId) => {
+    const companyIdNumber = Number(companyId);
+    if (isNaN(companyIdNumber)) {
+        return res.status(400).json({ message: "El ID de compañía no es válido." });
+    }
+
     const relation = await prisma.userCompany.findFirst({
-        where: { userId, companyId, available: true },
-        include: { company: true }
+        where: { userId, companyId: companyIdNumber, available: true },
+        include: { company: true, user: true }
     });
 
     if (!relation) {
         throw new Error("No tienes permiso para acceder a esta compañía");
     }
 
-    // Genera nuevo token con companyId + role
-    const token = generateToken({
-        id: userId,
-        companyId: relation.companyId,
-        role: relation.role
-    });
+    const token = generateToken(relation.user, relation.companyId, relation.role);
 
     return {
         message: "Compañía seleccionada correctamente",

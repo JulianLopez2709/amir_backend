@@ -1,4 +1,5 @@
 import { CreateUser, loginService, selectCompanyService } from '../services/authServices.js';
+import { generateToken } from '../middleware/auth.js';
 
 export const registerUser = async (req, res) => {
     try {
@@ -19,15 +20,23 @@ export const login = async (req, res) => {
     try {
         const { identifier, password } = req.body;
         const user = await loginService(identifier, password)
+
         if (!user) {
             return res.status(401).send({ message: 'Invalid credentials' });
         }
-        const { token, ...safeUserData } = user;
+
+        const token = generateToken(user.user);
+
+        //const { token, ...safeUserData } = user;
+
         res.cookie("token", token, {
             httpOnly: true,
-        })
-
-        res.status(201).json(safeUserData);
+            sameSite: "strict",
+            secure: process.env.NODE_ENV === "production",
+            maxAge: 1 * 24 * 60 * 60 * 1000, // 7 días
+        });
+        //cambiar la forma del json
+        res.status(201).json({ user, token });
     } catch (error) {
         res.status(401).send({ message: error.message });
     }
@@ -36,8 +45,10 @@ export const login = async (req, res) => {
 
 export const selectCompany = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.userId; // viene del token base
         const { companyId } = req.body;
+
+        //console.log("entra", userId, companyId)
 
         if (!companyId) {
             return res.status(400).json({ message: "companyId es requerido" });
