@@ -1,7 +1,45 @@
 import prisma from "../config/db.js";
 
 /**
- * 🔹 Obtener el stock de un producto específico
+ * 🔹 Crear o inicializar stock para un producto
+ */
+export const createOrUpdateStockService = async ({ productId, quantity = 0, type = "Inicial", reference = "Registro manual" }) => {
+  try {
+    // Verificar si el producto ya tiene registro de stock
+    const existingStock = await prisma.stock.findUnique({ where: { productId } });
+
+    if (existingStock) {
+      // Si existe, actualizamos la cantidad
+      const updatedStock = await prisma.stock.update({
+        where: { productId },
+        data: {
+          quantity: quantity,
+          type,
+          reference,
+        },
+      });
+      return updatedStock;
+    }
+
+    // Si no existe, lo creamos
+    const newStock = await prisma.stock.create({
+      data: {
+        productId,
+        quantity,
+        type,
+        reference,
+      },
+    });
+
+    return newStock;
+  } catch (error) {
+    console.error("❌ Error en createOrUpdateStockService:", error.message);
+    throw new Error("No se pudo crear o actualizar el stock.");
+  }
+};
+
+/**
+ * 🔹 Obtener stock por producto
  */
 export const getStockByProductService = async (productId) => {
   try {
@@ -9,67 +47,44 @@ export const getStockByProductService = async (productId) => {
       where: { productId },
       include: {
         product: {
-          select: { name: true, companyId: true },
+          select: { name: true, price_selling: true },
         },
       },
     });
+
+    if (!stock) {
+      throw new Error("No se encontró registro de stock para este producto.");
+    }
+
     return stock;
   } catch (error) {
-    console.error("❌ Error al obtener el stock:", error.message);
-    throw new Error("No se pudo obtener el stock del producto.");
+    console.error("❌ Error en getStockByProductService:", error.message);
+    throw new Error("No se pudo obtener el stock.");
   }
 };
 
 /**
- * 🔹 Actualizar el stock de un producto (suma o resta)
+ * 🔹 Ajustar stock (incrementar o disminuir)
  */
-export const updateStockService = async (productId, quantity, type, reference) => {
+export const adjustStockService = async (productId, quantityChange, reference = "Ajuste manual") => {
   try {
-    const existingStock = await prisma.stock.findUnique({ where: { productId } });
+    const stock = await prisma.stock.findUnique({ where: { productId } });
 
-    if (!existingStock) {
-      throw new Error("El producto no tiene registro de stock.");
-    }
-
-    const newQuantity = existingStock.quantity + quantity;
+    if (!stock) throw new Error("No existe stock para este producto.");
 
     const updatedStock = await prisma.stock.update({
       where: { productId },
       data: {
-        quantity: newQuantity,
-        type,
+        quantity: stock.quantity + quantityChange,
         reference,
+        type: quantityChange > 0 ? "Ingreso" : "Salida",
       },
     });
 
     return updatedStock;
   } catch (error) {
-    console.error("❌ Error al actualizar el stock:", error.message);
-    throw new Error("No se pudo actualizar el stock.");
+    console.error("❌ Error en adjustStockService:", error.message);
+    throw new Error("No se pudo ajustar el stock.");
   }
 };
 
-/**
- * 🔹 Obtener el stock de todos los productos de una compañía
- */
-export const getStockByCompanyService = async (companyId) => {
-  try {
-    const stockList = await prisma.stock.findMany({
-      where: {
-        product: {
-          companyId,
-        },
-      },
-      include: {
-        product: {
-          select: { name: true, companyId: true },
-        },
-      },
-    });
-
-    return stockList;
-  } catch (error) {
-    console.error("❌ Error al obtener stock de la compañía:", error.message);
-    throw new Error("No se pudo obtener el stock de la compañía.");
-  }
-};
