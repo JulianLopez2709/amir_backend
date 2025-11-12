@@ -108,6 +108,39 @@ export const getProductsByCompanyService = async (companyId) => {
   }
 };
 
+export const updateProductService = async (productId, data) => {
+    try {
+        // Verificar si el producto existe
+        const existingProduct = await prisma.product.findUnique({
+            where: { id: productId },
+        });
 
+        if (!existingProduct) {
+            throw new Error("El producto no existe");
+        }
+
+        // Actualizar producto con los datos recibidos
+        const updatedProduct = await prisma.product.update({
+            where: { id: productId },
+            data: {
+                name: data.name || existingProduct.name,
+                barcode: data.barcode ?? existingProduct.barcode,
+                description: data.description ?? existingProduct.description,
+                imgUrl: data.imgUrl ?? existingProduct.imgUrl,
+                price_cost: data.price_cost ?? existingProduct.price_cost,
+                price_selling: data.price_selling ?? existingProduct.price_selling,
+                available: data.available ?? existingProduct.available,
+                detail: data.detail ?? existingProduct.detail,
+                type: data.type ?? existingProduct.type,
+                unit: data.unit ?? existingProduct.unit,
+            },
+        });
+
+        return updatedProduct;
+    } catch (error) {
+        console.error("❌ Error en updateProductService:", error);
+        throw new Error("No se pudo actualizar el producto");
+    }
+};
 
 

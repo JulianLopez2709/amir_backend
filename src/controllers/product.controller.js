@@ -1,4 +1,8 @@
-import { createProductService, getProductsByCompanyService } from "../services/product.services.js";
+import {
+  createProductService,
+  getProductsByCompanyService,
+  updateProductService
+} from "../services/product.services.js";
 import io from "../server.js";
 
 /**
@@ -106,4 +110,30 @@ export const getProductsByCompany = async (req, res) => {
 };
 
 
+export const updateProduct = async (req, res) => {
+    try {
+        const { productId } = req.params;
+        const updateData = req.body;
+
+        if (!productId) {
+            return res.status(400).json({ message: "El ID del producto es obligatorio" });
+        }
+
+        const updatedProduct = await updateProductService(productId, updateData);
+
+        // Notificar mediante socket que el producto fue actualizado
+        io.emit("productUpdated", updatedProduct);
+
+        return res.status(200).json({
+            message: "Producto actualizado correctamente",
+            product: updatedProduct,
+        });
+    } catch (error) {
+        console.error("❌ Error al actualizar el producto:", error);
+        return res.status(500).json({
+            message: "Error interno al actualizar el producto",
+            error: error.message,
+        });
+    }
+};
 

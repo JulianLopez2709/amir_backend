@@ -1,21 +1,14 @@
 import { Router } from "express";
 import {
   createProduct,
-  getProductsByCompany
+  getProductsByCompany,
+  updateProduct
 } from "../controllers/product.controller.js";
 
 const router = Router();
 
-/**
- * 🔹 Rutas de productos
- */
-
-// Obtener todos los productos de una compañía
-// Ejemplo: GET /product/company/1
-router.get("/company/:companyId", getProductsByCompany);
-
-// Crear un nuevo producto
-// Ejemplo: POST /product
+router.get("/:companyId", getProductsByCompany);
 router.post("/", createProduct);
+router.put("/:productId", updateProduct); // 🔹 Nueva ruta para actualizar productos
 
 export default router;
