@@ -1,17 +1,17 @@
-import { createOrderService, getOrderDetailService } from "../services/order.services.js";
+import { createOrderService, getOrderDetailService, getOrdersByCompanyService } from "../services/order.services.js";
 
 /**
- * Crea una nueva orden
+ * Crea una nueva orden 
  */
 export const createOrder = async (req, res) => {
   try {
-    const { companyId, total_price, products, detail } = req.body;
+    const { companyId, products, detail } = req.body;
 
-    if (!companyId || !total_price || !products || products.length === 0) {
+    if (!companyId || !products || products.length === 0) {
       return res.status(400).json({ message: "Faltan datos obligatorios en la solicitud." });
     }
 
-    const newOrder = await createOrderService({ companyId, total_price, products, detail });
+    const newOrder = await createOrderService({ companyId, products, detail });
     return res.status(201).json({ message: "Orden creada correctamente", order: newOrder });
   } catch (error) {
     console.error("❌ Error en createOrder:", error.message);
@@ -38,24 +38,42 @@ export const getOrderDetail = async (req, res) => {
   }
 };
 
-import { getOrdersByCompanyService } from "../services/order.services.js";
-
 /**
  * Obtiene todas las órdenes de una compañía
  */
 export const getOrdersByCompany = async (req, res) => {
   try {
-    const { companyId } = req.params;
+    const { companyId, } = req.params;
+    const {
+      startDate,
+      endDate,
+      status,
+      minPrice,
+      maxPrice,
+      page,
+      limit
+    } = req.query;
 
     if (!companyId) {
       return res.status(400).json({ message: "Debe proporcionar un ID de compañía válido." });
     }
 
-    const orders = await getOrdersByCompanyService(parseInt(companyId));
+    const filters = {
+      startDate,
+      endDate,
+      status,
+      minPrice,
+      maxPrice,
+      page,
+      limit,
+    };
 
-    if (!orders || orders.length === 0) {
+    const orders = await getOrdersByCompanyService(parseInt(companyId), filters);
+    console.log(orders)
+    if (!orders || orders.data.length === 0) {
       return res.status(404).json({ message: "No se encontraron órdenes para esta compañía." });
     }
+
 
     return res.status(200).json(orders);
   } catch (error) {

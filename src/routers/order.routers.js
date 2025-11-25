@@ -11,7 +11,7 @@ const router = Router();
 // 🧾 Crear una nueva orden
 router.post("/", createOrder);
 
-// 🧾 Obtener todas las órdenes de una compañía
+// 🧾 Obtener todas las órdenes de una compañía 🟢
 router.get("/company/:companyId", getOrdersByCompany);
 
 // 🧾 Obtener detalle completo de una orden
