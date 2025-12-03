@@ -5,6 +5,7 @@ import prisma from "../config/db.js";
  * Crea una orden luego los producto luego hace el subtotal del producto y extra
  * NOTA: se le disminuye stock si tiene la variable stock_manage en true 
  * y se sigue disminuyendo aunq tenga 0 de stock
+ * NOTA: Lo que devueve son los datos de la orden y los snapshop de los producto
  */
 export const createOrderService = async ({ companyId, products, detail }) => {
   try {
@@ -132,6 +133,8 @@ export const createOrderService = async ({ companyId, products, detail }) => {
 
 /**
  * Obtiene el detalle completo de una orden
+ * NOTA: Deberia devolver los datos de la orden y los snapshops de los productos,
+ * no deberia hacer peticiones con coneccion al producto por que este puede ser actulizado
  */
 export const getOrderDetailService = async (orderId) => {
   try {
@@ -276,6 +279,8 @@ export const getOrdersByCompanyService = async (companyId, filter) => {
   }
 };
 
+// NOTA: Si el estado es cambiado a cancelado o finalizado los producto de la orden tambien deberia cambiar
+// NOTA: si es cancelada se devuelve el stock
 export const updateOrderStatusService = async (orderId, status) => {
   try {
     const updatedOrder = await prisma.order.update({
@@ -289,9 +294,243 @@ export const updateOrderStatusService = async (orderId, status) => {
         },
       },
     });
+
+    if (status == "confirmed" || status == "canceled") {
+
+    }
+
     return updatedOrder;
   } catch (error) {
     console.error("❌ Error en updateOrderStatusService:", error.message);
     throw new Error("No se pudo actualizar el estado de la orden.");
   }
 };
+
+//NOTA: el subtotal de cada producto en la orden no se actuliza
+//NOTA: Si una variante permanece no es necesario eliminarla y volverla a crear.
+//NOTA: El snapshop en la optiones de las variantes seleciones deberia mostrar el nombre opcion y vaiante   
+//NOTA: La funcion deberia devolver los datos de la orden y los snapshop
+export const updateOrderService = async (orderId, data) => {
+  try {
+
+    // 1. Validar que la orden exista
+    const existingOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        products: {
+          include: {
+            selectedOptions: {
+              include: {
+                variantOption: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!existingOrder) throw new Error("La orden no existe.");
+
+    // 2. Obtener los productOrder existentes
+    const existingItems = await prisma.productOrder.findMany({
+      where: { orderId },
+      include: {
+        selectedOptions: {
+          include: { variantOption: true }
+        }
+      }
+    });
+
+    // Mapa: productId → productOrder
+    const existingMap = new Map(
+      existingItems.map(item => [item.id, item])
+    );
+
+    // ============================================================
+    // 3. RECORRER LOS PRODUCTOS QUE VIENEN DEL CLIENTE
+    // ============================================================
+
+    for (const product of data.products) {
+      const { productId, quantity, notes, selectedOptions, id } = product;
+
+      // Obtener el producto original para snapshot
+      const original = await prisma.product.findUnique({
+        where: { id: productId }
+      });
+
+      if (!original) {
+        throw new Error(`Producto ${productId} no encontrado.`);
+      }
+
+      
+      // ============================
+      // CREAR SNAPSHOT COMPLETO
+      // ============================
+      /*const optionsSnapshot = original.variants.flatMap(variant =>
+        variant.options
+          .filter(opt => selectedOptions?.includes(opt.id))
+          .map(opt => ({
+            variantId: variant.id,
+            variantName: variant.name,
+            optionId: opt.id,
+            optionName: opt.name,
+            extraPrice: opt.extraPrice
+          }))
+      );*/
+
+      // Crear el snapshot COMPLETO
+      const snapshot = {
+        id: original.id,
+        name: original.name,
+        price: original.price_selling,
+        timestamp: new Date().toISOString(),
+        optionsSelected: selectedOptions ?? []
+      };
+
+      // ------------------------------------------------------------
+      // 3.1 PRODUCTO YA EXISTE → ACTUALIZAR
+      // ------------------------------------------------------------
+      if (existingMap.has(id)) {
+        const productOrder = existingMap.get(id);
+
+        await prisma.productOrder.update({
+          where: { id: productOrder.id },
+          data: {
+            quantity,
+            notes,
+            product_snapshot: snapshot
+          }
+        });
+
+        // Actualizar SELECT OPTIONS
+        await prisma.productOrderVariantOption.deleteMany({
+          where: { productOrderId: productOrder.id }
+        });
+
+
+        if (selectedOptions?.length > 0) {
+          await prisma.productOrderVariantOption.createMany({
+            data: selectedOptions.map(opt => ({
+              productOrderId: productOrder.id,
+              variantOptionId : opt
+            }))
+          });
+        }
+
+        // Quitar del map para identificar eliminados
+        existingMap.delete(id);
+
+
+      } else {
+        // ------------------------------------------------------------
+        // 3.2 PRODUCTO NUEVO → CREAR
+        // ------------------------------------------------------------
+        const newProductOrder = await prisma.productOrder.create({
+          data: {
+            status:"new",
+            orderId,
+            productId,
+            quantity,
+            notes,
+            product_snapshot: snapshot
+          }
+        });
+
+        // Insertar SELECT OPTIONS nuevas
+        if (selectedOptions?.length > 0) {
+          await prisma.productOrderVariantOption.createMany({
+            data: selectedOptions.map(optionId => ({
+              productOrderId: newProductOrder.id,
+              variantOptionId: optionId
+            }))
+          });
+        }
+      }
+    }
+
+    // ============================================================
+    // 4. ELIMINAR PRODUCTOS QUE YA NO ESTÁN EN LA ORDEN
+    // ============================================================
+
+    for (const leftover of existingMap.values()) {
+      await prisma.productOrderVariantOption.deleteMany({
+        where: { productOrderId: leftover.id }
+      });
+
+      await prisma.productOrder.delete({
+        where: { id: leftover.id }
+      });
+    }
+
+    // ============================================================
+    // 5. VOLVER A TRAER PRODUCTOS PARA CALCULAR EL TOTAL
+    // ============================================================
+
+    const finalProducts = await prisma.productOrder.findMany({
+      where: { orderId },
+      include: {
+        selectedOptions: {
+          include: { variantOption: true }
+        }
+      }
+    });
+
+    // ============================================================
+    // 6. CALCULAR TOTAL USANDO SNAPSHOT
+    // ============================================================
+
+    let total = 0;
+
+    for (const item of finalProducts) {
+      const snap = item.product_snapshot;
+
+      if (!snap) continue;
+
+      const base = snap.price * item.quantity;
+
+      // Si las variantOptions tienen precio, también súmalas
+      const optionsTotal = item.selectedOptions.reduce((acc, opt) => {
+        return acc + (opt.variantOption?.extraPrice || 0);
+      }, 0) * item.quantity;
+
+      total += base + optionsTotal;
+
+      /*await prisma.productOrder.update({
+        where: { id: item.id },
+        data: { subtotal }
+      });*/
+    }
+
+    // ============================================================
+    // 7. ACTUALIZAR ORDEN FINAL CON TOTAL
+    // ============================================================
+
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        detail: data.detail,
+        companyId: data.companyId,
+        total_price: total
+      },
+      include: {
+        products: {
+          include: {
+            selectedOptions: {
+              include: {
+                variantOption: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+
+    return updatedOrder;
+
+  } catch (error) {
+    console.error("Error actualizando la orden:", error);
+    throw error;
+  }
+};
+

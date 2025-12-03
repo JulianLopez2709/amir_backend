@@ -1,4 +1,4 @@
-import { createOrderService, getOrderDetailService, getOrdersByCompanyService } from "../services/order.services.js";
+import { createOrderService, getOrderDetailService, getOrdersByCompanyService, updateOrderStatusService, updateOrderService } from "../services/order.services.js";
 
 /**
  * Crea una nueva orden 
@@ -82,7 +82,6 @@ export const getOrdersByCompany = async (req, res) => {
   }
 };
 
-import { updateOrderStatusService } from "../services/order.services.js";
 
 /**
  * 🔹 Actualiza el estado de una orden
@@ -107,3 +106,22 @@ export const updateOrderStatus = async (req, res) => {
     return res.status(500).json({ message: "Error al actualizar la orden", error: error.message });
   }
 };
+
+export const updateOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const data = req.body;
+
+    if (!orderId || !data) {
+      return res.status(400).json({ message: "Faltan datos obligatorios en la solicitud." });
+    }
+
+    const orders = await updateOrderService(orderId, data);
+
+    return res.status(200).json(orders);
+
+  } catch (error) {
+    return res.status(500).json({ message: "Error al obtener las órdenes", error: error.message });
+
+  }
+}
