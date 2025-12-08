@@ -283,6 +283,24 @@ export const getOrdersByCompanyService = async (companyId, filter) => {
 // NOTA: si es cancelada se devuelve el stock
 export const updateOrderStatusService = async (orderId, status) => {
   try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        products: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                manage_stock: true
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) throw new Error("Orden no encontrada");
+
     const updatedOrder = await prisma.order.update({
       where: { id: orderId },
       data: { status },
@@ -306,10 +324,7 @@ export const updateOrderStatusService = async (orderId, status) => {
   }
 };
 
-//NOTA: el subtotal de cada producto en la orden no se actuliza
-//NOTA: Si una variante permanece no es necesario eliminarla y volverla a crear.
-//NOTA: El snapshop en la optiones de las variantes seleciones deberia mostrar el nombre opcion y vaiante   
-//NOTA: La funcion deberia devolver los datos de la orden y los snapshop
+// NOTA : Si el id de una campaña es actulizada puede haber un error
 export const updateOrderService = async (orderId, data) => {
   try {
 
@@ -355,36 +370,46 @@ export const updateOrderService = async (orderId, data) => {
 
       // Obtener el producto original para snapshot
       const original = await prisma.product.findUnique({
-        where: { id: productId }
+        where: { id: productId },
+        include: {
+          variants: {
+            include: {
+              options: true
+            }
+          }
+        }
       });
 
       if (!original) {
         throw new Error(`Producto ${productId} no encontrado.`);
       }
 
-      
+
       // ============================
       // CREAR SNAPSHOT COMPLETO
       // ============================
-      /*const optionsSnapshot = original.variants.flatMap(variant =>
-        variant.options
-          .filter(opt => selectedOptions?.includes(opt.id))
-          .map(opt => ({
-            variantId: variant.id,
-            variantName: variant.name,
-            optionId: opt.id,
-            optionName: opt.name,
-            extraPrice: opt.extraPrice
-          }))
-      );*/
+      const fullSnapshotOptions = [];
 
-      // Crear el snapshot COMPLETO
+      for (const variant of original.variants) {
+        for (const option of variant.options) {
+          if (selectedOptions?.includes(option.id)) {
+            fullSnapshotOptions.push({
+              variantId: variant.id,
+              variantName: variant.name,
+              optionId: option.id,
+              optionName: option.name,
+              extraPrice: option.extraPrice
+            });
+          }
+        }
+      }
+
       const snapshot = {
         id: original.id,
         name: original.name,
         price: original.price_selling,
         timestamp: new Date().toISOString(),
-        optionsSelected: selectedOptions ?? []
+        optionsSelected: fullSnapshotOptions
       };
 
       // ------------------------------------------------------------
@@ -403,16 +428,32 @@ export const updateOrderService = async (orderId, data) => {
         });
 
         // Actualizar SELECT OPTIONS
-        await prisma.productOrderVariantOption.deleteMany({
-          where: { productOrderId: productOrder.id }
-        });
+        const existingOptionIds = new Set(
+          productOrder.selectedOptions.map(o => o.variantOptionId)
+        );
 
+        const newOptionIds = new Set(selectedOptions || []);
 
-        if (selectedOptions?.length > 0) {
-          await prisma.productOrderVariantOption.createMany({
-            data: selectedOptions.map(opt => ({
+        // OPCIONES A ELIMINAR
+        const toDelete = [...existingOptionIds].filter(opt => !newOptionIds.has(opt));
+
+        if (toDelete.length > 0) {
+          await prisma.productOrderVariantOption.deleteMany({
+            where: {
               productOrderId: productOrder.id,
-              variantOptionId : opt
+              variantOptionId: { in: toDelete }
+            }
+          });
+        }
+
+        // OPCIONES A AGREGAR
+        const toAdd = [...newOptionIds].filter(opt => !existingOptionIds.has(opt));
+
+        if (toAdd.length > 0) {
+          await prisma.productOrderVariantOption.createMany({
+            data: toAdd.map(opt => ({
+              productOrderId: productOrder.id,
+              variantOptionId: opt
             }))
           });
         }
@@ -427,7 +468,7 @@ export const updateOrderService = async (orderId, data) => {
         // ------------------------------------------------------------
         const newProductOrder = await prisma.productOrder.create({
           data: {
-            status:"new",
+            status: "new",
             orderId,
             productId,
             quantity,
@@ -493,12 +534,13 @@ export const updateOrderService = async (orderId, data) => {
         return acc + (opt.variantOption?.extraPrice || 0);
       }, 0) * item.quantity;
 
+      const subtotal = base + optionsTotal;
       total += base + optionsTotal;
 
-      /*await prisma.productOrder.update({
+      await prisma.productOrder.update({
         where: { id: item.id },
         data: { subtotal }
-      });*/
+      });
     }
 
     // ============================================================
@@ -512,14 +554,17 @@ export const updateOrderService = async (orderId, data) => {
         companyId: data.companyId,
         total_price: total
       },
-      include: {
+      select: {
+        id: true,
+        detail: true,
+        total_price: true,
+        companyId: true,
         products: {
-          include: {
-            selectedOptions: {
-              include: {
-                variantOption: true
-              }
-            }
+          select: {
+            id: true,
+            quantity: true,         // <-- sí existe
+            subtotal: true,         // <-- reemplaza price
+            product_snapshot: true, // <-- sí existe
           }
         }
       }
