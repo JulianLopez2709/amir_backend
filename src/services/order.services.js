@@ -1,11 +1,12 @@
 import prisma from "../config/db.js";
+import { updateOrder } from "../controllers/order.controller.js";
 
 /**
  * Crea una nueva orden con sus productos asociados y las variales seleccionadas
  * Crea una orden luego los producto luego hace el subtotal del producto y extra
  * NOTA: se le disminuye stock si tiene la variable stock_manage en true 
  * y se sigue disminuyendo aunq tenga 0 de stock
- * NOTA: Lo que devueve son los datos de la orden y los snapshop de los producto
+ * NOTA : se debe mostrar el subtotal, id de ordenproduct
  */
 export const createOrderService = async ({ companyId, products, detail }) => {
   try {
@@ -20,7 +21,7 @@ export const createOrderService = async ({ companyId, products, detail }) => {
         companyId,
         detail,
         status: "new",
-        total_price: 0, // provisional
+        total_price: 0,
       },
     });
 
@@ -41,7 +42,6 @@ export const createOrderService = async ({ companyId, products, detail }) => {
         throw new Error(`El producto con ID ${productId} no existe o no pertenece a la empresa.`);
       }
 
-
       let subtotal = product.price_selling * quantity;
 
       // 4️⃣ Calcular extra de variantes
@@ -56,19 +56,32 @@ export const createOrderService = async ({ companyId, products, detail }) => {
       }
 
       subtotal += extraTotal;
-
-      // Sumamos al total general
       totalPrice += subtotal;
 
-      // 5️⃣ Crear snapshot del producto
+      // 5️⃣ Crear snapshot del producto con TODA la info
+      const optionsSnapshot = [];
+
+      for (const variant of product.variants) {
+        for (const option of variant.options) {
+          if (selectedOptions.includes(option.id)) {
+            optionsSnapshot.push({
+              optionId: option.id,
+              variantId: variant.id,
+              extraPrice: option.extraPrice,
+              optionName: option.name,
+              variantName: variant.name,
+            });
+          }
+        }
+      }
+
       const snapshot = {
         id: product.id,
         name: product.name,
         price: product.price_selling,
-        optionsSelected: selectedOptions,
         timestamp: new Date().toISOString(),
+        optionsSelected: optionsSnapshot, // ← snapshot completo
       };
-
 
       // 6️⃣ Crear ProductOrder
       const productOrder = await prisma.productOrder.create({
@@ -83,8 +96,7 @@ export const createOrderService = async ({ companyId, products, detail }) => {
         },
       });
 
-
-      // 7️⃣ Crear opciones seleccionadas
+      // 7️⃣ Registrar opciones seleccionadas
       for (const optionId of selectedOptions) {
         await prisma.productOrderVariantOption.create({
           data: {
@@ -94,11 +106,9 @@ export const createOrderService = async ({ companyId, products, detail }) => {
         });
       }
 
-      // Actualizar el stock (decrementar cantidad)
-      if (product.manage_stock) {//falta condicionar mas 
-        const stock = await prisma.stock.findUnique({
-          where: { productId }
-        });
+      // 8️⃣ Actualizar stock
+      if (product.manage_stock) {
+        const stock = await prisma.stock.findUnique({ where: { productId } });
 
         if (!stock) {
           throw new Error(`No existe stock registrado para el producto ${productId}`);
@@ -107,34 +117,34 @@ export const createOrderService = async ({ companyId, products, detail }) => {
         await prisma.stock.update({
           where: { productId },
           data: {
-            quantity: stock.quantity -= quantity,
+            quantity: stock.quantity - quantity, // corregido
           },
         });
       }
     }
 
+    // 9️⃣ Retornar la orden + snapshots
     const updatedOrder = await prisma.order.update({
       where: { id: newOrder.id },
       data: { total_price: totalPrice },
       include: {
         products: {
-          include: {
-            selectedOptions: true
+          select: {
+            product_snapshot: true,
           }
         }
       }
     });
+
     return updatedOrder;
+
   } catch (error) {
-    console.error("❌ Error en createOrderService:", error.message);
     throw new Error("No se pudo crear la orden. Verifica los datos enviados.");
   }
 };
 
 /**
- * Obtiene el detalle completo de una orden
- * NOTA: Deberia devolver los datos de la orden y los snapshops de los productos,
- * no deberia hacer peticiones con coneccion al producto por que este puede ser actulizado
+ * Obtiene el detalle completo de una orden / todavia no se que uzo darle
  */
 export const getOrderDetailService = async (orderId) => {
   try {
@@ -163,6 +173,10 @@ export const getOrderDetailService = async (orderId) => {
   }
 };
 
+
+/**
+ * Obtiene el detalle completo de una orden
+ */
 export const getOrdersByCompanyService = async (companyId, filter) => {
   try {
     let {
@@ -229,11 +243,10 @@ export const getOrdersByCompanyService = async (companyId, filter) => {
     if (status) {
       where.status = status;
     }
-    console.log("body where ", where)
+
     const example = await prisma.order.findMany({
       where
     })
-    console.log("responde example", example)
 
     // Filtro por monto
     if (minPrice || maxPrice) {
@@ -251,17 +264,14 @@ export const getOrdersByCompanyService = async (companyId, filter) => {
 
       include: {
         products: {
-          include: {
-            product: true,
-            selectedOptions: {
-              include: {
-                variantOption: true
-              }
-            }
+          select: {
+            product_snapshot: true,
+            //selectedOptions: true
           }
         }
       }
     });
+
 
 
     const total = await prisma.order.count({ where });
@@ -279,43 +289,83 @@ export const getOrdersByCompanyService = async (companyId, filter) => {
   }
 };
 
-// NOTA: Si el estado es cambiado a cancelado o finalizado los producto de la orden tambien deberia cambiar
-// NOTA: si es cancelada se devuelve el stock
 export const updateOrderStatusService = async (orderId, status) => {
   try {
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: {
-        products: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                manage_stock: true
+    const updatedOrder = await prisma.$transaction(async (tx) => {
+      // 1. Obtener orden con productos
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: {
+          products: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                  manage_stock: true,
+                },
               },
             },
           },
         },
-      },
-    });
+      });
 
-    if (!order) throw new Error("Orden no encontrada");
+      if (!order) throw new Error("Orden no encontrada");
 
-    const updatedOrder = await prisma.order.update({
-      where: { id: orderId },
-      data: { status },
-      include: {
-        products: {
-          include: {
-            product: { select: { name: true } },
+      // 2. Actualizar estado de la orden
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status },
+      });
+
+      // 3. Si se cancela → devolver stock
+      if (status === "canceled") {
+        for (const item of order.products) {
+          if (item.product.manage_stock) {
+            await tx.stock.update({
+              where: { productId: item.product.id },
+              data: {
+                quantity: { increment: item.quantity },
+              },
+            });
+          }
+
+          await tx.productOrder.update({
+            where: { id: item.id },
+            data: { status: "canceled" },
+          });
+        }
+      }
+
+      // 4. Si se confirma o completa → actualizar estados
+      if (status === "confirmed" || status === "completed") {
+        for (const item of order.products) {
+          await tx.productOrder.update({
+            where: { id: item.id },
+            data: { status },
+          });
+        }
+      }
+
+      // 5.CONSULTAR LA ORDEN YA ACTUALIZADA
+      const finalOrder = await tx.order.findUnique({
+        where: { id: orderId },
+        select: {
+          id: true,
+          status: true,
+          products: {
+            select: {
+              id: true,
+              status: true,
+              quantity: true
+            },
           },
         },
-      },
+      });
+
+
+      return finalOrder;
     });
-
-    if (status == "confirmed" || status == "canceled") {
-
-    }
 
     return updatedOrder;
   } catch (error) {

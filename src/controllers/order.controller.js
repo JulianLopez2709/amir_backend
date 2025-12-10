@@ -69,7 +69,6 @@ export const getOrdersByCompany = async (req, res) => {
     };
 
     const orders = await getOrdersByCompanyService(parseInt(companyId), filters);
-    console.log(orders)
     if (!orders || orders.data.length === 0) {
       return res.status(404).json({ message: "No se encontraron órdenes para esta compañía." });
     }
@@ -98,8 +97,7 @@ export const updateOrderStatus = async (req, res) => {
     const updatedOrder = await updateOrderStatusService(orderId, status);
 
     return res.status(200).json({
-      message: "Estado de la orden actualizado correctamente",
-      order: updatedOrder,
+      updatedOrder,
     });
   } catch (error) {
     console.error("❌ Error en updateOrderStatus:", error.message);
