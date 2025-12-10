@@ -33,7 +33,6 @@ export function setupWebSocket(server) {
 
     io.use(async (socket, next) => {
         const cookieHeader = socket.request.headers.cookie;
-        console.log("tokken by used ", cookieHeader)
          if (!cookieHeader) {
             return next(new Error('Authentication error: No cookies provided'));
         }
