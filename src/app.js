@@ -10,9 +10,7 @@ import prisma from './config/db.js';
 import router from './routers/auth.js';
 import routerStock from "./routers/stock.routers.js";
 import routerVariant from "./routers/variant.routers.js";
-
-
-
+import cookieParser from 'cookie-parser';
 
 const app = express()
 app.use(express.json())
@@ -27,6 +25,8 @@ app.use(cors({
   origin: allowedOrigins, 
   credentials: true,
 }));
+
+app.use(cookieParser());
 
 app.use(express.urlencoded({ extended: true }));
 

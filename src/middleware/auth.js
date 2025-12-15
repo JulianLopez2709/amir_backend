@@ -79,11 +79,11 @@ export const authorizeCompany = async (req, res, next) => {
 
 
 
-export const generateToken = (user, companyId,role, expiresIn = "12h") => {
+export const generateToken = (user, companyId, role, expiresIn = "12h") => {
   const payload = {
     userId: user.id,
     email: user.email,
-    name: user.name,  
+    name: user.name,
     companyId,
     role
   };

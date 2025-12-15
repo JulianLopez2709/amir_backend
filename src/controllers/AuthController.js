@@ -51,7 +51,6 @@ export const selectCompany = async (req, res) => {
     try {
         const userId = req.userId; // viene del token base
         const { companyId } = req.body;
-
         if (!companyId) {
             return res.status(400).json({ message: "companyId es requerido" });
         }
