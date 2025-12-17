@@ -137,3 +137,36 @@ export const updateProduct = async (req, res) => {
     }
 };
 
+export const testUpload = async (req, res) => {
+    try {
+
+        if (!req.file) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "No se recibió el archivo. Asegúrate de enviar un campo 'image' y usar 'multipart/form-data'.",
+                debug: {
+                    bodyReceived: req.body,
+                    headers: req.headers['content-type']
+                }
+            });
+        }
+
+        const imageUrl = req.file.path; 
+
+        const { name, price } = req.body; 
+
+        res.status(201).json({ 
+            success: true, 
+            message: "Imagen subida correctamente a Cloudinary",
+            data: { 
+                name, 
+                price, 
+                imageUrl,
+                fileDetails: req.file 
+            } 
+        });
+    } catch (error) {
+        console.error("❌ Error en testUpload:", error);
+        res.status(500).json({ error: error.message });
+    } 
+}
