@@ -8,6 +8,7 @@ import routerProduct from './routers/product.routers.js'
 import routerOrden from './routers/order.routers.js'
 import prisma from './config/db.js';
 import router from './routers/auth.js';
+import settingsRouters from "./routers/settings.routers.js";
 
 const app = express()
 app.use(express.json())
@@ -30,6 +31,7 @@ app.use("/product", routerProduct)
 app.use("/company", routerCompany)
 app.use("/user", routerUser)
 app.use("/auth", router);
+app.use("/settings", settingsRouters);
 
 // Middleware de manejo de errores
 app.use((err, req, res, next) => {
