@@ -20,7 +20,7 @@ export const createOrderService = async ({ companyId, products, detail }) => {
       data: {
         companyId,
         detail,
-        status: "new",
+        status: "pending",
         total_price: 0,
       },
     });
@@ -154,7 +154,12 @@ export const getOrderDetailService = async (orderId) => {
         products: {
           include: {
             product: {
-              select: { name: true, price_selling: true, imgUrl: true },
+              select: {
+                name: true, price_selling: true,
+                quantity: true,
+                imgUrl: true,
+                snapshot:true
+              },
             },
           },
         },
@@ -265,6 +270,11 @@ export const getOrdersByCompanyService = async (companyId, filter) => {
       include: {
         products: {
           select: {
+            id: true,
+            status: true,
+            subtotal: true,
+            notes: true,
+            quantity: true,
             product_snapshot: true,
             //selectedOptions: true
           }
