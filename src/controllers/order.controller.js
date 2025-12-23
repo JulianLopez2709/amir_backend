@@ -25,7 +25,6 @@ export const createOrder = async (req, res) => {
 export const getOrderDetail = async (req, res) => {
   try {
     const { orderId } = req.params;
-
     if (!orderId) {
       return res.status(400).json({ message: "Debe proporcionar un ID de orden válido." });
     }

@@ -77,6 +77,11 @@ export const createOrderService = async ({ companyId, products, detail }) => {
 
       const snapshot = {
         id: product.id,
+        description: product.description,
+        img: product.img,
+        price_selling: product.price_selling,
+        price_cost: product.price_cost,
+        quantity,
         name: product.name,
         price: product.price_selling,
         timestamp: new Date().toISOString(),
@@ -151,19 +156,11 @@ export const getOrderDetailService = async (orderId) => {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
-        products: {
-          include: {
-            product: {
-              select: {
-                name: true, price_selling: true,
-                quantity: true,
-                imgUrl: true,
-                snapshot:true
-              },
-            },
-          },
+        products:{
+          select : {
+            product_snapshot : true
+          }
         },
-        company: { select: { name: true } },
       },
     });
 
