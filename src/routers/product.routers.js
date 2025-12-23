@@ -1,4 +1,5 @@
 import { Router } from "express";
+import upload from "../middleware/uploadMiddleware.js";
 import {
   createProduct,
   getProductsByCompany,
@@ -8,7 +9,7 @@ import {
 const router = Router();
 
 router.get("/:companyId", getProductsByCompany);
-router.post("/", createProduct);
-router.put("/:productId", updateProduct); // 🔹 Nueva ruta para actualizar productos
+router.post("/", upload.single('image'), createProduct);
+router.put("/:productId", upload.single('image'), updateProduct); // 🔹 Nueva ruta para actualizar productos
 
 export default router;

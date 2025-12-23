@@ -119,27 +119,37 @@ export const updateProductService = async (productId, data) => {
             throw new Error("El producto no existe");
         }
 
-        // Actualizar producto con los datos recibidos
+        // Si data.detail existe y es objeto, lo mezclamos con el existente
+        // Ojo: prisma solo hace replace del JSON, no merge profundo por defecto
+        let newDetail = existingProduct.detail;
+        if (data.detail) {
+            newDetail = data.detail; // Asignamos directamente lo nuevo
+        }
+
+        // Preparamos el objeto updateData solo con los campos definidos
+        // Esto evita asignar "undefined" o usar lógica compleja con ??
+        const updateData = {};
+        if (data.name !== undefined) updateData.name = data.name;
+        if (data.barcode !== undefined) updateData.barcode = data.barcode;
+        if (data.description !== undefined) updateData.description = data.description;
+        if (data.imgUrl !== undefined) updateData.imgUrl = data.imgUrl;
+        if (data.price_cost !== undefined) updateData.price_cost = data.price_cost;
+        if (data.price_selling !== undefined) updateData.price_selling = data.price_selling;
+        if (data.available !== undefined) updateData.available = data.available;
+        if (data.detail !== undefined) updateData.detail = newDetail;
+        if (data.type !== undefined) updateData.type = data.type;
+        if (data.unit !== undefined) updateData.unit = data.unit;
+
+        // Actualizar producto
         const updatedProduct = await prisma.product.update({
             where: { id: productId },
-            data: {
-                name: data.name || existingProduct.name,
-                barcode: data.barcode ?? existingProduct.barcode,
-                description: data.description ?? existingProduct.description,
-                imgUrl: data.imgUrl ?? existingProduct.imgUrl,
-                price_cost: data.price_cost ?? existingProduct.price_cost,
-                price_selling: data.price_selling ?? existingProduct.price_selling,
-                available: data.available ?? existingProduct.available,
-                detail: data.detail ?? existingProduct.detail,
-                type: data.type ?? existingProduct.type,
-                unit: data.unit ?? existingProduct.unit,
-            },
+            data: updateData,
         });
 
         return updatedProduct;
     } catch (error) {
         console.error("❌ Error en updateProductService:", error);
-        throw new Error("No se pudo actualizar el producto");
+        throw error; // Re-lanzar el error original para ver qué pasa
     }
 };
 

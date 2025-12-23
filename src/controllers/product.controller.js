@@ -10,11 +10,10 @@ import io from "../server.js";
  */
 export const createProduct = async (req, res) => {
   try {
-    const {
+    let {
       name,
       barcode = "",
       description = "",
-      imgUrl = "",
       price_cost = 0,
       price_selling = 0,
       stock = 0,
@@ -31,6 +30,33 @@ export const createProduct = async (req, res) => {
       return res.status(400).json({
         message: "El nombre y el companyId son obligatorios",
       });
+    }
+
+    // 🔹 Manejo de la imagen (Cloudinary)
+    const imgUrl = req.file ? req.file.path : (req.body.imgUrl || "");
+
+    // 🔹 Parseo de objetos complejos si vienen como strings (común en multipart/form-data)
+    if (typeof detail === 'string') {
+        try {
+            detail = JSON.parse(detail);
+        } catch (e) {
+            console.error("Error parseando detail:", e);
+            detail = {};
+        }
+    }
+
+    if (typeof variants === 'string') {
+        try {
+            variants = JSON.parse(variants);
+        } catch (e) {
+            console.error("Error parseando variants:", e);
+            variants = [];
+        }
+    }
+    
+    // Parseo de booleanos
+    if (typeof available === 'string') {
+        available = available === 'true';
     }
 
     // 🔹 Parseo de datos numéricos
@@ -113,15 +139,29 @@ export const getProductsByCompany = async (req, res) => {
 export const updateProduct = async (req, res) => {
     try {
         const { productId } = req.params;
-        const updateData = req.body;
-
+        
         if (!productId) {
             return res.status(400).json({ message: "El ID del producto es obligatorio" });
         }
 
+        const updateData = { ...req.body };
+
+        // Si se subió una imagen, actualizamos la URL
+        if (req.file) {
+            updateData.imgUrl = req.file.path;
+        }
+
+        // Conversión EXPLÍCITA de tipos (necesario para multipart/form-data)
+        if (updateData.price_cost !== undefined) updateData.price_cost = parseFloat(updateData.price_cost);
+        if (updateData.price_selling !== undefined) updateData.price_selling = parseFloat(updateData.price_selling);
+        if (updateData.stock !== undefined) updateData.stock = parseInt(updateData.stock);
+        
+        if (updateData.available === 'true') updateData.available = true;
+        if (updateData.available === 'false') updateData.available = false;
+
         const updatedProduct = await updateProductService(productId, updateData);
 
-        // Notificar mediante socket que el producto fue actualizado
+        // Notificar cambio
         io.emit("productUpdated", updatedProduct);
 
         return res.status(200).json({
@@ -129,11 +169,10 @@ export const updateProduct = async (req, res) => {
             product: updatedProduct,
         });
     } catch (error) {
-        console.error("❌ Error al actualizar el producto:", error);
+        console.error("Error updating product:", error);
         return res.status(500).json({
-            message: "Error interno al actualizar el producto",
+            message: "Error al actualizar el producto",
             error: error.message,
         });
     }
 };
-
