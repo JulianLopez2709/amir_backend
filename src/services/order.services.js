@@ -21,7 +21,7 @@ export const createOrderService = async ({ companyId, products, detail }) => {
       data: {
         companyId,
         detail,
-        status: "new",
+        status: "pending",
         total_price: 0,
       },
     });
@@ -78,6 +78,10 @@ export const createOrderService = async ({ companyId, products, detail }) => {
 
       const snapshot = {
         id: product.id,
+        description: product.description,
+        imgUrl: product.imgUrl,
+        price_selling: product.price_selling,
+        price_cost: product.price_cost,
         name: product.name,
         price: product.price_selling,
         timestamp: new Date().toISOString(),
@@ -154,14 +158,16 @@ export const getOrderDetailService = async (orderId) => {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
-        products: {
-          include: {
-            product: {
-              select: { name: true, price_selling: true, imgUrl: true },
-            },
-          },
+        products:{
+          select : {
+            id : true,
+            subtotal : true,
+            quantity : true,
+            status : true,
+            notes : true,
+            product_snapshot : true
+          }
         },
-        company: { select: { name: true } },
       },
     });
 
@@ -268,6 +274,11 @@ export const getOrdersByCompanyService = async (companyId, filter) => {
       include: {
         products: {
           select: {
+            id: true,
+            status: true,
+            subtotal: true,
+            notes: true,
+            quantity: true,
             product_snapshot: true,
             //selectedOptions: true
           }
@@ -460,6 +471,10 @@ export const updateOrderService = async (orderId, data) => {
       const snapshot = {
         id: original.id,
         name: original.name,
+        imgUrl: original.imgUrl,
+        description: original.description,
+        price_cost: original.price_cost,
+        price_selling: original.price_selling,
         price: original.price_selling,
         timestamp: new Date().toISOString(),
         optionsSelected: fullSnapshotOptions

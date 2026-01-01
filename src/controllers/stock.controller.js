@@ -41,7 +41,6 @@ export const getStockByProduct = async (req, res) => {
 export const adjustStock = async (req, res) => {
   try {
     const { productId, quantityChange, reference } = req.body;
-
     if (!productId || typeof quantityChange !== "number") {
       return res.status(400).json({ message: "productId y quantityChange son obligatorios" });
     }
