@@ -78,10 +78,9 @@ export const createOrderService = async ({ companyId, products, detail }) => {
       const snapshot = {
         id: product.id,
         description: product.description,
-        img: product.img,
+        imgUrl: product.imgUrl,
         price_selling: product.price_selling,
         price_cost: product.price_cost,
-        quantity,
         name: product.name,
         price: product.price_selling,
         timestamp: new Date().toISOString(),
@@ -158,6 +157,11 @@ export const getOrderDetailService = async (orderId) => {
       include: {
         products:{
           select : {
+            id : true,
+            subtotal : true,
+            quantity : true,
+            status : true,
+            notes : true,
             product_snapshot : true
           }
         },
@@ -464,6 +468,10 @@ export const updateOrderService = async (orderId, data) => {
       const snapshot = {
         id: original.id,
         name: original.name,
+        imgUrl: original.imgUrl,
+        description: original.description,
+        price_cost: original.price_cost,
+        price_selling: original.price_selling,
         price: original.price_selling,
         timestamp: new Date().toISOString(),
         optionsSelected: fullSnapshotOptions
