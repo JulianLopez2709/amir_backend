@@ -91,9 +91,6 @@ export const createProduct = async (req, res) => {
       variants,
     });
 
-    // 🔹 Emitir evento en tiempo real (solo si se crea correctamente)
-    io.to(parsedData.companyId).emit("newProduct", newProduct);
-
     return res.status(201).json({
       message: "✅ Producto creado correctamente",
       product: newProduct,

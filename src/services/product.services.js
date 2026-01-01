@@ -1,4 +1,5 @@
 import prisma from "../config/db.js";
+import { emitProductNew } from "../sockets/emitters/product.emit.js";
 
 /**
  * 🔹 Crea un nuevo producto con soporte para variantes y stock opcional.
@@ -75,6 +76,8 @@ export const createProductService = async ({
         }
       }
     }
+
+    emitProductNew(companyId, newProduct);
 
     return newProduct;
   } catch (error) {

@@ -1,5 +1,6 @@
 import prisma from "../config/db.js";
 import { updateOrder } from "../controllers/order.controller.js";
+import { emitOrderCreated } from "../sockets/emitters/order.emit.js";
 
 /**
  * Crea una nueva orden con sus productos asociados y las variales seleccionadas
@@ -135,6 +136,8 @@ export const createOrderService = async ({ companyId, products, detail }) => {
         }
       }
     });
+
+    emitOrderCreated(companyId, newOrder.id);
 
     return updatedOrder;
 

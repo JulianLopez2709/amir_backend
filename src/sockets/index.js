@@ -68,8 +68,6 @@ export function setupWebSocket(server) {
     io.on("connection", (socket) => {
         // Unir el socket a una sala específica de su empresa
         // Cada empresa tendrá su propia "sala" de Socket.IO
-        console.log(`Cliente conectado: ${socket.id} en la sala de empresa: ${/*socket.companyId*/ socket.companyId}`);
-
         socket.on('message', ({ to, data }) => {
             console.log("enviando mensaje ... ", data, " a ", to)
             socket.to(to).emit("message added", data)

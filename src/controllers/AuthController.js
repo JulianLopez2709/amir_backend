@@ -24,7 +24,7 @@ export const login = async (req, res) => {
             return res.status(401).send({ message: 'Invalid credentials' });
         }
 
-        const token = generateToken(user);
+        const token = generateToken(user, companies[0].id);
 
         //const { token, ...safeUserData } = user;
 
