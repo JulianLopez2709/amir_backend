@@ -36,6 +36,7 @@ export const loginService = async (identifier, password) => {
             companies: user.companies.map(c => ({
                 id: c.company.id,
                 logo: c.company.logo,
+                available: c.available,
                 name: c.company.name,
                 role: c.role
             })),
@@ -61,6 +62,13 @@ export const selectCompanyService = async (userId, companyId) => {
     }
 
     const token = generateToken(relation.user, relation.companyId, relation.role);
+
+    res.cookie("token", token, {
+        httpOnly: true,
+        sameSite: "strict",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 12 * 60 * 60 * 1000,
+    });
 
     return {
         message: "Compañía seleccionada correctamente",

@@ -30,5 +30,5 @@ export const emitOrderDeleted = (companyId, orderId) => {
 
 
 export const emitOrderCreated = (companyId, orderId) => {
-    io.to(companyId).emit("order:created", { orderId });
+    io.to(companyId).emit("order:created",  orderId);
 };

@@ -24,7 +24,14 @@ export const login = async (req, res) => {
             return res.status(401).send({ message: 'Invalid credentials' });
         }
 
-        const token = generateToken(user, companies[0].id);
+        const availableCompanies = companies.filter(c => c.available);
+
+        if (!availableCompanies.length) {
+            return res.status(403).json({ message: "No tienes compañías activas" });
+        }
+
+        const token = generateToken(user, availableCompanies[0].id, availableCompanies[0].role);
+
 
         //const { token, ...safeUserData } = user;
 

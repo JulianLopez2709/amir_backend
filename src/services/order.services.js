@@ -1,6 +1,6 @@
 import prisma from "../config/db.js";
 import { updateOrder } from "../controllers/order.controller.js";
-import { emitOrderCreated } from "../sockets/emitters/order.emit.js";
+import { emitOrderCreated, emitOrderStatusChanged } from "../sockets/emitters/order.emit.js";
 
 /**
  * Crea una nueva orden con sus productos asociados y las variales seleccionadas
@@ -141,7 +141,14 @@ export const createOrderService = async ({ companyId, products, detail }) => {
       }
     });
 
-    emitOrderCreated(companyId, newOrder.id);
+    const fullOrder = await prisma.order.findUnique({
+      where: { id: newOrder.id },
+      include: {
+        products: true
+      }
+    });
+
+    emitOrderCreated(companyId, fullOrder);
 
     return updatedOrder;
 
@@ -158,14 +165,14 @@ export const getOrderDetailService = async (orderId) => {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
-        products:{
-          select : {
-            id : true,
-            subtotal : true,
-            quantity : true,
-            status : true,
-            notes : true,
-            product_snapshot : true
+        products: {
+          select: {
+            id: true,
+            subtotal: true,
+            quantity: true,
+            status: true,
+            notes: true,
+            product_snapshot: true
           }
         },
       },
@@ -376,6 +383,8 @@ export const updateOrderStatusService = async (orderId, status) => {
           },
         },
       });
+      
+      emitOrderStatusChanged(order.companyId, { orderId, status });
 
 
       return finalOrder;
