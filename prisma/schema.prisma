@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -18,23 +12,39 @@ model User {
   name      String
   email     String        @unique
   username  String        @unique
+  plan      String        @default("basic")
   password  String
-  phone   String
+  phone     String
   createdAt DateTime      @default(now())
   companies UserCompany[]
+  notification UserNotification[]
+}
+
+model UserNotification {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  user       User      @relation(fields: [userId], references: [id])
+  title      String
+  message    String
+  companyId Int?
+  type       String     // Ej: INVITATION, PLAN_ALERT, ROLE_CHANGE, SYSTEM
+  isRead     Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  readAt     DateTime?
+  metadata   Json?      // Información adicional, como { companyId: 2, sender: "Admin" }
 }
 
 model UserCompany {
-  id Int @id @default(autoincrement())
-
-  user User @relation(fields: [userId], references: [id])
-  userId Int
-
-  company   Company @relation(fields: [companyId], references: [id])
+  id        Int      @id @default(autoincrement())
+  userId    Int
   companyId Int
+  role      String   @default("asesor")
+  available Boolean  @default(true)
+  createdAt DateTime @default(now())
+  company   Company  @relation(fields: [companyId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
-  role      String  @default("asesor")
-  avaliable Boolean @default(true)
+  @@unique([userId, companyId])
 }
 
 model Company {
@@ -46,71 +56,125 @@ model Company {
   plan            String
   primary_color   String
   secondary_color String
-  avaliable        Boolean       @default(true)
   createdAt       DateTime      @default(now())
-  users           UserCompany[]
-  products        Product[]
-  orders          Order[]
+  available       Boolean       @default(true)
   accunts         Account[]
+  orders          Order[]
+  products        Product[]
+  users           UserCompany[]
+  notification CompanyNotification[]
+}
+
+model CompanyNotification {
+  id          Int       @id @default(autoincrement())
+  companyId   Int
+  company     Company   @relation(fields: [companyId], references: [id])
+  title       String
+  message     String
+  type        String     // Ej: STOCK_ALERT, NEW_CLIENT, ORDER_LARGE, INTERNAL_NOTE
+  isRead      Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  readAt      DateTime?
+  metadata    Json?      // Ej: { productId: "xyz", orderId: "123" }
 }
 
 model Account {
-  id        String      @id @default(uuid())
-  type      String
-  price     Float
-  const     Boolean
-  date      DateTime @default(now())
-  companyId Int
-  company   Company  @relation(fields: [companyId], references: [id])
+  id          String   @id @default(uuid())
+  type        String
+  price       Float
+  const       Boolean
+  date        DateTime @default(now())
+  companyId   Int
+  description String?
+  name        String
+  company     Company  @relation(fields: [companyId], references: [id])
 }
 
 model Product {
-  id            String       @id @default(uuid())
+  id            String         @id @default(uuid())
   name          String
   barcode       String?
   description   String?
   imgUrl        String?
   price_cost    Float
   price_selling Float
-  stock_minimo  Int?
-  stock         Int?
-  avaliable     Boolean @default(true)
   detail        Json?
-  createAt      DateTime  @default(now())
-  is_favorite   Boolean   @default(false)
-  categoryId    Int?
-  category      Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-
-  companyId Int
-  company   Company        @relation(fields: [companyId], references: [id])
-  orders    ProductOrder[]
+  createAt      DateTime       @default(now())
+  is_favorite   Boolean        @default(false)
+  /// categoryId    Int?
+  /// category      Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  companyId     Int
+  available     Boolean        @default(true)
+  deleteAt      DateTime?
+  manage_stock  Boolean        @default(true)
+  type          String
+  unit          String
+  updatedAt     DateTime       @updatedAt
+  company       Company        @relation(fields: [companyId], references: [id])
+  orders        ProductOrder[]
+  stock_records Stock? 
+  variants      Variant[]
 }
 
 model ProductOrder {
-  id     Int    @id @default(autoincrement())
-  status String
-  quantity Int
-  notes  String
-
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
-
-  orderId String
-  order   Order @relation(fields: [orderId], references: [id])
+  id               Int                         @id @default(autoincrement())
+  status           String
+  quantity         Int
+  notes            String
+  productId        String
+  orderId          String
+  product_snapshot Json?
+  subtotal         Float?
+  updatedAt   DateTime       @updatedAt
+  order            Order                       @relation(fields: [orderId], references: [id])
+  product          Product                     @relation(fields: [productId], references: [id])
+  selectedOptions  ProductOrderVariantOption[]
 }
 
 model Order {
-  id          String            @id @default(uuid())
+  id          String         @id @default(uuid())
   status      String         @default("new")
   total_price Float
   createAt    DateTime       @default(now())
   companyId   Int
+  detail Json?
+  updatedAt   DateTime       @updatedAt
   company     Company        @relation(fields: [companyId], references: [id])
   products    ProductOrder[]
 }
 
-model Category {
-  id       Int       @id @default(autoincrement())
-  name     String
-  products Product[]
+model Variant {
+  id        Int             @id @default(autoincrement())
+  name      String
+  type      String
+  productId String
+  product   Product         @relation(fields: [productId], references: [id])
+  options   VariantOption[]
+}
+
+model VariantOption {
+  id                  Int                         @id @default(autoincrement())
+  name                String
+  extraPrice          Float                       @default(0)
+  variantId           Int
+  productOrderOptions ProductOrderVariantOption[]
+  variant             Variant                     @relation(fields: [variantId], references: [id])
+}
+
+model ProductOrderVariantOption {
+  id              Int           @id @default(autoincrement())
+  productOrderId  Int
+  variantOptionId Int
+  productOrder    ProductOrder  @relation(fields: [productOrderId], references: [id])
+  variantOption   VariantOption @relation(fields: [variantOptionId], references: [id])
+}
+
+model Stock {
+  id        Int      @id @default(autoincrement())
+  productId String  @unique
+  quantity  Int      @default(0)
+  type      String?
+  reference String?
+  createdAt DateTime @default(now())
+  product   Product?  @relation(fields: [productId], references: [id])
 }
