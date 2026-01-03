@@ -1,6 +1,7 @@
 import {
   getGananciasService,
   getOrdenesHoyService,
+  getGananciasHoyService,
   getOrdenesEnProcesoService,
   getChartService
 } from "../services/dashboard.services.js";
@@ -18,10 +19,12 @@ export const getDashboardSummary = async (req, res) => {
 
     const [
       ganancias,
+      gananciasHoyData,
       ordenesHoy,
       ordenesEnProceso
     ] = await Promise.all([
       getGananciasService(companyId),
+      getGananciasHoyService(companyId),
       getOrdenesHoyService(companyId),
       getOrdenesEnProcesoService(companyId)
     ]);
@@ -29,6 +32,8 @@ export const getDashboardSummary = async (req, res) => {
     return res.status(200).json({
       gananciasMesActual: ganancias.mesActual,
       gananciasMesPasado: ganancias.mesPasado,
+      gananciasHoy: gananciasHoyData.gananciasHoy,
+      gananciaEstimadaHoy: gananciasHoyData.gananciaEstimadaHoy,
       totalOrdenesHoy: ordenesHoy.totalOrdenesHoy,
       ordenesFinalizadasHoy: ordenesHoy.ordenesFinalizadasHoy,
       ordenesEnProceso: ordenesEnProceso

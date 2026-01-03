@@ -1,5 +1,6 @@
+import { endOfDay, startOfDay } from "date-fns";
 import prisma from "../config/db.js";
-
+import { toZonedTime } from "date-fns-tz";
 /**
  * 🔹 Ganancias mes actual y mes pasado
  */
@@ -59,11 +60,12 @@ export const getGananciasService = async (companyId) => {
  */
 export const getOrdenesHoyService = async (companyId) => {
   try {
-    const inicioDia = new Date();
-    inicioDia.setHours(0, 0, 0, 0);
+    const now = new Date();
 
-    const finDia = new Date();
-    finDia.setHours(23, 59, 59, 999);
+    // Inicio del día local
+    const inicioDia = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+    const finDia = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
+
 
     const totalHoy = await prisma.order.count({
       where: {
@@ -182,3 +184,55 @@ export const getChartService = async (companyId, filtro) => {
   }
 };
 
+// services/dashboard.services.js
+export const getGananciasHoyService = async (companyId) => {
+  try {
+    const now = new Date();
+
+    // Inicio del día local
+    /*const inicioDia = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+    const finDia = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));*/
+
+    // Ajuste a hora local (UTC-5)
+    const offset = 5 * 60; // 5 horas en minutos
+    const inicioDia = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+    inicioDia.setUTCMinutes(inicioDia.getUTCMinutes() - offset);
+
+    const finDia = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
+    finDia.setUTCMinutes(finDia.getUTCMinutes() - offset);
+
+
+    // Obtener todas las órdenes del día
+    const ordenesHoy = await prisma.order.findMany({
+      where: {
+        companyId,
+        createAt: {
+          gte: inicioDia,
+          lte: finDia,
+        },
+      },
+      select: {
+        total_price: true,
+        status: true,
+      },
+    });
+
+    // Ganancias confirmadas
+    const gananciasHoy = ordenesHoy
+      .filter(o => o.status === "completed")
+      .reduce((sum, o) => sum + o.total_price, 0);
+
+    // Ganancia estimada (todas excepto canceled)
+    const gananciaEstimadaHoy = ordenesHoy
+      .filter(o => o.status !== "canceled")
+      .reduce((sum, o) => sum + o.total_price, 0);
+
+    return {
+      gananciasHoy,
+      gananciaEstimadaHoy,
+    };
+  } catch (error) {
+    console.error("❌ Error en getGananciasHoyService:", error);
+    throw error;
+  }
+};
