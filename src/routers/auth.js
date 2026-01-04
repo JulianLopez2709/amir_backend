@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerUser,login, selectCompany } from '../controllers/authController.js';
+import { registerUser,login, selectCompany } from "../controllers/auth.controller.js";
 import jwt from 'jsonwebtoken';
 import { authenticateToken, authorizeCompany } from "../middleware/auth.js";
 
