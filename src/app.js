@@ -23,7 +23,7 @@ const allowedOrigins = corsOriginEnv
   : ['http://localhost:5173'];
 
 app.use(cors({
-  origin: true, 
+  origin: allowedOrigins, 
   credentials: true,
 }));
 
