@@ -32,7 +32,14 @@ export function setupWebSocket(server) {
     });
 
     io.use(async (socket, next) => {
-        const token = socket.handshake.auth.token;
+        const cookieHeader = socket.handshake.headers.cookie;
+        if (!cookieHeader) {
+            return next(new Error('Authentication error: No cookies provided'));
+        }
+
+        const cookies = parse(cookieHeader);
+
+        const token = cookies.token;
 
         if (!token) {
             console.log("Conexión WebSocket rechazada: No se proporcionó token.");
