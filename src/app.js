@@ -23,9 +23,12 @@ const allowedOrigins = corsOriginEnv
   : ['http://localhost:5173'];
 
 app.use(cors({
-  origin: '*', 
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: false,
 }));
+
+app.options('*', cors());
 
 app.use(cookieParser());
 
@@ -42,8 +45,8 @@ app.use("/dashboard", dashboardRouters);
 
 // Middleware de manejo de errores
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ error: 'Error del servidor' });
+  console.error(err.stack);
+  res.status(500).json({ error: 'Error del servidor' });
 });
 
 export default app
