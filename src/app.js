@@ -28,8 +28,6 @@ app.use(cors({
   credentials: false,
 }));
 
-app.options('*', cors());
-
 app.use(cookieParser());
 
 app.use(express.urlencoded({ extended: true }));
