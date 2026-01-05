@@ -32,14 +32,7 @@ export function setupWebSocket(server) {
     });
 
     io.use(async (socket, next) => {
-        const cookieHeader = socket.request.headers.cookie;
-         if (!cookieHeader) {
-            return next(new Error('Authentication error: No cookies provided'));
-        }
-
-        const cookies = parse(cookieHeader);
-
-        const token = cookies.token; 
+        const token = socket.handshake.auth.token;
 
         if (!token) {
             console.log("Conexión WebSocket rechazada: No se proporcionó token.");
@@ -60,7 +53,7 @@ export function setupWebSocket(server) {
             next(new Error('Authentication error: Invalid token or company ID missing'));
         }
     })
-    
+
 
     //algunas peticiones por websocket que debo tener encuenta ¿
     //newProduct, productUpdated, stockUpdated, productDeleted
