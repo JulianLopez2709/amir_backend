@@ -13,6 +13,9 @@ RUN npm install
 # Copia el resto del código de la aplicación
 COPY . .
 
+#Prisma Generate
+RUN npx prisma generate
+
 # Expone el puerto que tu aplicación usa 
 EXPOSE 3000
 
