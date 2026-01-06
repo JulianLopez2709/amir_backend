@@ -32,32 +32,29 @@ export function setupWebSocket(server) {
     });
 
     io.use(async (socket, next) => {
-        const cookieHeader = socket.handshake.headers.cookie;
-        if (!cookieHeader) {
-            return next(new Error('Authentication error: No cookies provided'));
-        }
+        try {
+            const token = socket.handshake.auth?.token || socket.handshake.headers.cookie?.split('token=')[1];
+            console.log("HEADERS:", socket.handshake.headers);
+            console.log("AUTH:", socket.handshake.auth);
+            if (!token) {
+                console.log("Conexión WebSocket rechazada: Token no proporcionado");
+                return next(new Error('Authentication error: Token not provided'));
+            }
 
-        const cookies = parse(cookieHeader);
+            const companyId = verifyTokenAndGetCompanyId(token);
 
-        const token = cookies.token;
+            if (!companyId) {
+                console.log("Conexión WebSocket rechazada: Token inválido o companyId no encontrado");
+                return next(new Error('Authentication error: Invalid token'));
+            }
 
-        if (!token) {
-            console.log("Conexión WebSocket rechazada: No se proporcionó token.");
-            return next(new Error('Authentication error: Token not provided'));
-        }
-
-        const companyId = await verifyTokenAndGetCompanyId(token);
-
-        if (companyId) {
-            // Guarda el companyId en el objeto socket para usarlo después
             socket.companyId = companyId;
-            socket.join(socket.companyId);
-
-            console.log(`Usuario autenticado, uniéndose a la empresa: ${companyId}`);
-            next(); // Permite la conexión
-        } else {
-            console.log("Conexión WebSocket rechazada: Token inválido o companyId no encontrado.");
-            next(new Error('Authentication error: Invalid token or company ID missing'));
+            socket.join(companyId);
+            console.log(`Usuario autenticado, sala: ${companyId}`);
+            next();
+        } catch (error) {
+            console.error(err);
+            next(new Error('Authentication error'));
         }
     })
 
