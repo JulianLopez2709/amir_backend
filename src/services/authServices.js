@@ -65,8 +65,8 @@ export const selectCompanyService = async (userId, companyId) => {
 
     res.cookie("token", token, {
         httpOnly: true,
-        sameSite: "strict",
-        secure: process.env.NODE_ENV === "production",
+        sameSite: "none",
+        secure: true,
         maxAge: 12 * 60 * 60 * 1000,
     });
 
