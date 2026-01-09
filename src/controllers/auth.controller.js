@@ -19,6 +19,8 @@ export const registerUser = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const { identifier, password } = req.body;
+        console.log("intento de login")
+        console.log(identifier, " ",password)
         const { user, notifications, companies } = await loginService(identifier, password)
         if (!user) {
             return res.status(401).send({ message: 'Invalid credentials' });
@@ -34,11 +36,12 @@ export const login = async (req, res) => {
 
 
         //const { token, ...safeUserData } = user;
+        const isProd = process.env.NODE_ENV === "production";
 
         res.cookie("token", token, {
             httpOnly: true,
-            sameSite: "none",
-            secure: process.env.NODE_ENV === "production",
+            sameSite: isProd ? "none" : "lax",
+            secure: isProd,
             maxAge: 1 * 24 * 60 * 60 * 1000, // 7 días
         });
 
@@ -62,7 +65,18 @@ export const selectCompany = async (req, res) => {
             return res.status(400).json({ message: "companyId es requerido" });
         }
 
+        const isProd = process.env.NODE_ENV === "production";
+
         const result = await selectCompanyService(userId, companyId);
+        const { token } = result;
+
+        res.cookie("token", token, {
+            httpOnly: true,
+            sameSite: isProd ? "none" : "lax",
+            secure: isProd,
+            maxAge: 12 * 60 * 60 * 1000,
+        });
+
         return res.status(200).json(result);
     } catch (error) {
         console.error("Error en selectCompany:", error);

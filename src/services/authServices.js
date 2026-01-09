@@ -63,12 +63,6 @@ export const selectCompanyService = async (userId, companyId) => {
 
     const token = generateToken(relation.user, relation.companyId, relation.role);
 
-    res.cookie("token", token, {
-        httpOnly: true,
-        sameSite: "none",
-        secure: true,
-        maxAge: 12 * 60 * 60 * 1000,
-    });
 
     return {
         message: "Compañía seleccionada correctamente",
