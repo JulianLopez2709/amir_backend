@@ -193,8 +193,6 @@ export const getOrderDetailService = async (orderId) => {
 /**
  * Obtiene el detalle completo de una orden
  */
-const BUSINESS_TZ_OFFSET = -5;
-
 export const getOrdersByCompanyService = async (companyId, filter) => {
   try {
 
@@ -218,13 +216,13 @@ export const getOrdersByCompanyService = async (companyId, filter) => {
     let parsedEnd;
 
     if (startDate) {
-      const range = getUTCDateRangeForLocalDay(startDate);
+      const range = getUTCDateRangeForBusinessDay(startDate);
       parsedStart = range.startUTC;
       parsedEnd = range.endUTC;
     } else {
       // HOY en Colombia
       const todayLocal = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-      const range = getUTCDateRangeForLocalDay(todayLocal);
+      const range = getUTCDateRangeForBusinessDay(todayLocal);
       parsedStart = range.startUTC;
       parsedEnd = range.endUTC;
     }
@@ -319,14 +317,15 @@ export const getOrdersByCompanyService = async (companyId, filter) => {
     throw new Error("No se pudieron obtener las órdenes de la compañía.");
   }
 };
-function getUTCDateRangeForLocalDay(dateString) {
+function getUTCDateRangeForBusinessDay(dateString) {
   const [year, month, day] = dateString.split('-').map(Number);
 
-  const startLocal = new Date(year, month - 1, day, 0, 0, 0);
-  const endLocal = new Date(year, month - 1, day, 23, 59, 59, 999);
+  // Colombia UTC-5
+  // 05:00 COL = 10:00 UTC
+  const startUTC = new Date(Date.UTC(year, month - 1, day, 10, 0, 0, 0));
 
-  const startUTC = new Date(startLocal.getTime() - (BUSINESS_TZ_OFFSET * 60 * 60 * 1000));
-  const endUTC = new Date(endLocal.getTime() - (BUSINESS_TZ_OFFSET * 60 * 60 * 1000));
+  // 04:59 COL del día siguiente = 09:59 UTC
+  const endUTC = new Date(Date.UTC(year, month - 1, day + 1, 9, 59, 59, 999));
 
   return { startUTC, endUTC };
 }
