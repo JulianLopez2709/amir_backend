@@ -19,8 +19,6 @@ export const registerUser = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const { identifier, password } = req.body;
-        console.log("intento de login")
-        console.log(identifier, " ",password)
         const { user, notifications, companies } = await loginService(identifier, password)
         if (!user) {
             return res.status(401).send({ message: 'Invalid credentials' });

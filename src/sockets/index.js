@@ -34,8 +34,6 @@ export function setupWebSocket(server) {
     io.use(async (socket, next) => {
         try {
             const token = socket.handshake.auth?.token || socket.handshake.headers.cookie?.split('token=')[1];
-            console.log("HEADERS:", socket.handshake.headers);
-            console.log("AUTH:", socket.handshake.auth);
             if (!token) {
                 console.log("Conexión WebSocket rechazada: Token no proporcionado");
                 return next(new Error('Authentication error: Token not provided'));
