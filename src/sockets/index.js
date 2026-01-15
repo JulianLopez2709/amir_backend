@@ -28,7 +28,10 @@ export function setupWebSocket(server) {
         cors: {
             origin: allowedOrigins, // Usa tus orígenes permitidos
             credentials: true,
-        }
+        },
+        pingInterval: 25000,
+        pingTimeout: 20000,
+        transports: ["websocket"],
     });
 
     io.use(async (socket, next) => {
