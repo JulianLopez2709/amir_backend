@@ -221,7 +221,9 @@ export const getOrdersByCompanyService = async (companyId, filter) => {
       parsedEnd = range.endUTC;
     } else {
       // HOY en Colombia
-      const todayLocal = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+      const todayLocal = new Date(
+        new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' })
+      ).toISOString().slice(0, 10); // YYYY-MM-DD
       const range = getUTCDateRangeForBusinessDay(todayLocal);
       parsedStart = range.startUTC;
       parsedEnd = range.endUTC;
