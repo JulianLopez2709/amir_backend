@@ -31,7 +31,7 @@ export function setupWebSocket(server) {
         },
         pingInterval: 25000,
         pingTimeout: 20000,
-        transports: ["websocket"],
+        transports: ["polling", "websocket"],
     });
 
     io.use(async (socket, next) => {
