@@ -8,9 +8,38 @@ export const getGananciasService = async (companyId) => {
   try {
     const now = new Date();
 
-    const inicioMesActual = new Date(now.getFullYear(), now.getMonth(), 1);
-    const inicioMesPasado = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const finMesPasado = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+    const inicioMesActual = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      1,
+      10, 0, 0
+    );
+
+    const finMesActual = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      1,
+      9, 59, 59
+    );
+
+
+    // =========================
+    // MES PASADO (operativo)
+    // =========================
+    const inicioMesPasado = new Date(
+      now.getFullYear(),
+      now.getMonth() - 1,
+      1,
+      10, 0, 0
+    );
+
+    const finMesPasado = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      1,
+      9, 59, 59
+    );
+
 
     const gananciaMesActual = await prisma.order.aggregate({
       where: {
@@ -18,6 +47,7 @@ export const getGananciasService = async (companyId) => {
         status: "completed",
         createAt: {
           gte: inicioMesActual,
+          lte: finMesActual,
         },
       },
       _sum: {
@@ -60,19 +90,17 @@ export const getGananciasService = async (companyId) => {
  */
 export const getOrdenesHoyService = async (companyId) => {
   try {
-    const now = new Date();
+    const todayLocal = new Date()
+      .toLocaleDateString("en-CA", { timeZone: "America/Bogota" }); // YYYY-MM-DD
 
-    // Inicio del día local
-    const inicioDia = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
-    const finDia = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
-
+    const { startUTC, endUTC } = getUTCDateRangeForBusinessDay(todayLocal);
 
     const totalHoy = await prisma.order.count({
       where: {
         companyId,
         createAt: {
-          gte: inicioDia,
-          lte: finDia,
+          gte: startUTC,
+          lte: endUTC,
         },
       },
     });
@@ -82,8 +110,8 @@ export const getOrdenesHoyService = async (companyId) => {
         companyId,
         status: "completed",
         createAt: {
-          gte: inicioDia,
-          lte: finDia,
+          gte: startUTC,
+          lte: endUTC,
         },
       },
     });
@@ -111,6 +139,8 @@ export const getOrdenesEnProcesoService = async (companyId) => {
         },
       },
       select: {
+        createAt: true,
+        total_price: true,
         id: true,
       },
       orderBy: {
@@ -120,9 +150,7 @@ export const getOrdenesEnProcesoService = async (companyId) => {
 
     return {
       cantidad: ordenes.length,
-      ordenes: ordenes.map((o) => ({
-        id: o.id.slice(-4), // últimos 4 caracteres
-      })),
+      ordenes: ordenes,
     };
   } catch (error) {
     console.error("❌ Error en getOrdenesEnProcesoService:", error);
@@ -187,28 +215,17 @@ export const getChartService = async (companyId, filtro) => {
 // services/dashboard.services.js
 export const getGananciasHoyService = async (companyId) => {
   try {
-    const now = new Date();
+    const todayLocal = new Date()
+      .toLocaleDateString("en-CA", { timeZone: "America/Bogota" }); // YYYY-MM-DD
 
-    // Inicio del día local
-    /*const inicioDia = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
-    const finDia = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));*/
+    const { startUTC, endUTC } = getUTCDateRangeForBusinessDay(todayLocal);
 
-    // Ajuste a hora local (UTC-5)
-    const offset = 5 * 60; // 5 horas en minutos
-    const inicioDia = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
-    inicioDia.setUTCMinutes(inicioDia.getUTCMinutes() - offset);
-
-    const finDia = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
-    finDia.setUTCMinutes(finDia.getUTCMinutes() - offset);
-
-
-    // Obtener todas las órdenes del día
     const ordenesHoy = await prisma.order.findMany({
       where: {
         companyId,
         createAt: {
-          gte: inicioDia,
-          lte: finDia,
+          gte: startUTC,
+          lte: endUTC,
         },
       },
       select: {
@@ -217,12 +234,10 @@ export const getGananciasHoyService = async (companyId) => {
       },
     });
 
-    // Ganancias confirmadas
     const gananciasHoy = ordenesHoy
       .filter(o => o.status === "completed")
       .reduce((sum, o) => sum + o.total_price, 0);
 
-    // Ganancia estimada (todas excepto canceled)
     const gananciaEstimadaHoy = ordenesHoy
       .filter(o => o.status !== "canceled")
       .reduce((sum, o) => sum + o.total_price, 0);
@@ -236,3 +251,15 @@ export const getGananciasHoyService = async (companyId) => {
     throw error;
   }
 };
+function getUTCDateRangeForBusinessDay(dateString) {
+  const [year, month, day] = dateString.split('-').map(Number);
+
+  // Colombia UTC-5
+  // 05:00 COL = 10:00 UTC
+  const startUTC = new Date(Date.UTC(year, month - 1, day, 10, 0, 0, 0));
+
+  // 04:59 COL del día siguiente = 09:59 UTC
+  const endUTC = new Date(Date.UTC(year, month - 1, day + 1, 9, 59, 59, 999));
+
+  return { startUTC, endUTC };
+}

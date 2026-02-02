@@ -285,7 +285,7 @@ export const getOrdersByCompanyService = async (companyId, filter) => {
     const orders = await prisma.order.findMany({
       where,
       skip: (page - 1) * limit,
-      take: limit,
+      //take: limit,
       orderBy: { createAt: "desc" },
 
       include: {
