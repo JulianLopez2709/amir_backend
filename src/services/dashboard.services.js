@@ -139,6 +139,8 @@ export const getOrdenesEnProcesoService = async (companyId) => {
         },
       },
       select: {
+        createAt: true,
+        total_price: true,
         id: true,
       },
       orderBy: {
@@ -148,9 +150,7 @@ export const getOrdenesEnProcesoService = async (companyId) => {
 
     return {
       cantidad: ordenes.length,
-      ordenes: ordenes.map((o) => ({
-        id: o.id.slice(-4), // últimos 4 caracteres
-      })),
+      ordenes: ordenes,
     };
   } catch (error) {
     console.error("❌ Error en getOrdenesEnProcesoService:", error);
