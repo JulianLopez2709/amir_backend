@@ -82,6 +82,10 @@ export const createOrderService = async ({ companyId, products, detail }) => {
         imgUrl: product.imgUrl,
         price_selling: product.price_selling,
         price_cost: product.price_cost,
+        price_before_tax: product.price_before_tax,
+        iva_percent: product.iva_percent,
+        icui_percent: product.icui_percent,
+        inc_percent: product.inc_percent,
         name: product.name,
         price: product.price_selling,
         timestamp: new Date().toISOString(),
@@ -203,7 +207,7 @@ export const getOrdersByCompanyService = async (companyId, filter) => {
       minPrice,
       maxPrice,
       page = 1,
-      limit = 10
+      limit = 12
     } = filter;
 
     page = parseInt(page);
@@ -304,7 +308,6 @@ export const getOrdersByCompanyService = async (companyId, filter) => {
     });
 
 
-
     const total = await prisma.order.count({ where });
 
     return {
@@ -334,7 +337,12 @@ function getUTCDateRangeForBusinessDay(dateString) {
 
 
 
-export const updateOrderStatusService = async (orderId, status) => {
+/**
+ * @param {string} orderId
+ * @param {string} status
+ * @param { string | null } number
+ */
+export const updateOrderStatusService = async (orderId, status, factusBillNumber) => {
   try {
     const updatedOrder = await prisma.$transaction(async (tx) => {
       // 1. Obtener orden con productos
@@ -357,10 +365,21 @@ export const updateOrderStatusService = async (orderId, status) => {
 
       if (!order) throw new Error("Orden no encontrada");
 
+      const orderUpdate = { status };
+
+      // Número de factura electrónica Factus (solo al completar; opcional si el negocio no factura)
+      if (status === "completed" && factusBillNumber != null) {
+        const billNumber = String(factusBillNumber).trim();
+
+        if (billNumber.length > 0) {
+          orderUpdate.number = billNumber;
+        }
+      }
+
       // 2. Actualizar estado de la orden
       await tx.order.update({
         where: { id: orderId },
-        data: { status },
+        data: orderUpdate,
       });
 
       // 3. Si se cancela → devolver stock
@@ -382,8 +401,8 @@ export const updateOrderStatusService = async (orderId, status) => {
         }
       }
 
-      // 4. Si se confirma o completa → actualizar estados
-      if (status === "confirmed" || status === "completed") {
+      // 4. Si se confirma, en progreso o completa → actualizar líneas
+      if (status === "confirmed" || status === "in_progress" || status === "completed") {
         for (const item of order.products) {
           await tx.productOrder.update({
             where: { id: item.id },
@@ -398,6 +417,7 @@ export const updateOrderStatusService = async (orderId, status) => {
         select: {
           id: true,
           status: true,
+          number: true,
           products: {
             select: {
               id: true,
@@ -508,6 +528,10 @@ export const updateOrderService = async (orderId, data) => {
         description: original.description,
         price_cost: original.price_cost,
         price_selling: original.price_selling,
+        inc_percent: original.inc_percent,
+        iva_percent: original.iva_percent,
+        icui_percent: original.icui_percent,
+        price_before_tax: original.price_before_tax,
         price: original.price_selling,
         timestamp: new Date().toISOString(),
         optionsSelected: fullSnapshotOptions

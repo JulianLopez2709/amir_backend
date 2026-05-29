@@ -16,6 +16,10 @@ export const createProduct = async (req, res) => {
       description = "",
       price_cost = 0,
       price_selling = 0,
+      price_before_tax = 0,
+      iva_percent = 19,
+      icui_percent = 0,
+      inc_percent = 0,
       stock = 0,
       available = true,
       detail = {},
@@ -64,6 +68,10 @@ export const createProduct = async (req, res) => {
       companyId: parseInt(companyId),
       price_cost: parseFloat(price_cost),
       price_selling: parseFloat(price_selling),
+      price_before_tax: parseFloat(price_before_tax),
+      iva_percent: parseFloat(iva_percent),
+      icui_percent: parseFloat(icui_percent),
+      inc_percent: parseFloat(inc_percent),
       stock: parseInt(stock),
     };
 
@@ -82,6 +90,10 @@ export const createProduct = async (req, res) => {
       imgUrl,
       price_cost: parsedData.price_cost,
       price_selling: parsedData.price_selling,
+      price_before_tax: parsedData.price_before_tax,
+      iva_percent: parsedData.iva_percent,
+      icui_percent: parsedData.icui_percent,
+      inc_percent: parsedData.inc_percent,
       stock: parsedData.stock,
       available,
       detail,
@@ -134,42 +146,80 @@ export const getProductsByCompany = async (req, res) => {
 
 
 export const updateProduct = async (req, res) => {
-    try {
-        const { productId } = req.params;
-        
-        if (!productId) {
-            return res.status(400).json({ message: "El ID del producto es obligatorio" });
-        }
+  try {
+    const { productId } = req.params;
 
-        const updateData = { ...req.body };
-
-        // Si se subió una imagen, actualizamos la URL
-        if (req.file) {
-            updateData.imgUrl = req.file.path;
-        }
-
-        // Conversión EXPLÍCITA de tipos (necesario para multipart/form-data)
-        if (updateData.price_cost !== undefined) updateData.price_cost = parseFloat(updateData.price_cost);
-        if (updateData.price_selling !== undefined) updateData.price_selling = parseFloat(updateData.price_selling);
-        if (updateData.stock !== undefined) updateData.stock = parseInt(updateData.stock);
-        
-        if (updateData.available === 'true') updateData.available = true;
-        if (updateData.available === 'false') updateData.available = false;
-
-        const updatedProduct = await updateProductService(productId, updateData);
-
-        // Notificar cambio
-        io.emit("productUpdated", updatedProduct);
-
-        return res.status(200).json({
-            message: "Producto actualizado correctamente",
-            product: updatedProduct,
-        });
-    } catch (error) {
-        console.error("Error updating product:", error);
-        return res.status(500).json({
-            message: "Error al actualizar el producto",
-            error: error.message,
-        });
+    if (!productId) {
+      return res.status(400).json({
+        message: "El ID del producto es obligatorio",
+      });
     }
+
+    const updateData = { ...req.body };
+
+    // Imagen
+    if (req.file) {
+      updateData.imgUrl = req.file.path;
+    }
+
+    // =========================
+    // Conversión de tipos
+    // =========================
+
+    const floatFields = [
+      "price_cost",
+      "price_selling",
+      "price_before_tax",
+      "iva_percent",
+      "icui_percent",
+      "inc_percent",
+    ];
+
+    floatFields.forEach((field) => {
+      if (updateData[field] !== undefined) {
+        updateData[field] = parseFloat(updateData[field]);
+      }
+    });
+
+    const booleanFields = [
+      "available",
+      "manage_stock",
+      "is_favorite",
+    ];
+
+    booleanFields.forEach((field) => {
+      if (updateData[field] === "true") {
+        updateData[field] = true;
+      }
+
+      if (updateData[field] === "false") {
+        updateData[field] = false;
+      }
+    });
+
+    // Variants viene como string desde form-data
+    if (updateData.variants) {
+      updateData.variants = JSON.parse(updateData.variants);
+    }
+
+    const updatedProduct = await updateProductService(
+      productId,
+      updateData
+    );
+
+    io.emit("productUpdated", updatedProduct);
+
+    return res.status(200).json({
+      message: "Producto actualizado correctamente",
+      product: updatedProduct,
+    });
+
+  } catch (error) {
+    console.error("Error updating product:", error);
+
+    return res.status(500).json({
+      message: "Error al actualizar el producto",
+      error: error.message,
+    });
+  }
 };

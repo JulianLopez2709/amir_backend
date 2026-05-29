@@ -12,6 +12,7 @@ import routerStock from "./routers/stock.routers.js";
 import routerVariant from "./routers/variant.routers.js";
 import cookieParser from 'cookie-parser';
 import dashboardRouters from "./routers/dashboard.routers.js";
+import routerFactus from "./routers/factus.routers.js";
 
 const app = express()
 app.use(express.json())
@@ -40,6 +41,7 @@ app.use("/user", routerUser)
 app.use("/auth", router);
 app.use("/variant", routerVariant);
 app.use("/dashboard", dashboardRouters);
+app.use("/factus", routerFactus);
 
 // Middleware de manejo de errores
 app.use((err, req, res, next) => {

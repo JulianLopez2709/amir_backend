@@ -10,6 +10,6 @@ const router = Router();
 
 router.get("/:companyId", getProductsByCompany);
 router.post("/", upload.single('image'), createProduct);
-router.put("/:productId", upload.single('image'), updateProduct); // 🔹 Nueva ruta para actualizar productos
+router.patch("/:productId", upload.single('image'), updateProduct); // 🔹 Nueva ruta para actualizar productos
 
 export default router;
