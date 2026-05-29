@@ -186,7 +186,7 @@ export const updateProductService = async (productId, data) => {
       // VARIANTES
       // =========================
 
-      if (data.variants) {
+      /*if (data.variants) {
 
         // Borrar variantes viejas
         await tx.variantOption.deleteMany({
@@ -226,7 +226,7 @@ export const updateProductService = async (productId, data) => {
 
           }
         }
-      }
+      }*/
 
       return product;
     });
