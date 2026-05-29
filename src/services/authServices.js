@@ -11,7 +11,18 @@ export const loginService = async (identifier, password) => {
             },
             include: {
                 companies: {
-                    include: { company: true }
+                    select: {
+                        available: true,
+                        role: true,
+                        company: {
+                            select: {
+                                id: true,
+                                logo: true,
+                                name: true,
+                                hasBilling: true
+                            }
+                        }
+                    }
                 },
                 notification: {
                     where: { isRead: false },
@@ -37,6 +48,7 @@ export const loginService = async (identifier, password) => {
                 id: c.company.id,
                 logo: c.company.logo,
                 available: c.available,
+                hasBilling: c.company.hasBilling,
                 name: c.company.name,
                 role: c.role
             })),
@@ -67,8 +79,7 @@ export const selectCompanyService = async (userId, companyId) => {
     return {
         message: "Compañía seleccionada correctamente",
         company: {
-            id: relation.company.id,
-            name: relation.company.name,
+            ...relation.company,
             role: relation.role
         },
         token

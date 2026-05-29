@@ -8,30 +8,30 @@ datasource db {
 }
 
 model User {
-  id        Int           @id @default(autoincrement())
-  name      String
-  email     String        @unique
-  username  String        @unique
-  plan      String        @default("basic")
-  password  String
-  phone     String
-  createdAt DateTime      @default(now())
-  companies UserCompany[]
+  id           Int                @id @default(autoincrement())
+  name         String
+  email        String             @unique
+  username     String             @unique
+  password     String
+  phone        String
+  createdAt    DateTime           @default(now())
+  plan         String             @default("basic")
+  companies    UserCompany[]
   notification UserNotification[]
 }
 
 model UserNotification {
-  id         Int       @id @default(autoincrement())
-  userId     Int
-  user       User      @relation(fields: [userId], references: [id])
-  title      String
-  message    String
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  title     String
+  message   String
+  type      String
+  isRead    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+  metadata  Json?
   companyId Int?
-  type       String     // Ej: INVITATION, PLAN_ALERT, ROLE_CHANGE, SYSTEM
-  isRead     Boolean    @default(false)
-  createdAt  DateTime   @default(now())
-  readAt     DateTime?
-  metadata   Json?      // Información adicional, como { companyId: 2, sender: "Admin" }
+  user      User      @relation(fields: [userId], references: [id])
 }
 
 model UserCompany {
@@ -48,38 +48,48 @@ model UserCompany {
 }
 
 model Company {
-  id              Int           @id @default(autoincrement())
-  name            String
-  slogan          String
-  logo            String
-  type            String
-  plan            String
-  nit             String?
-  phone           String?
-  address         String?
-  initPlanDate    DateTime?
-  primary_color   String
-  secondary_color String
-  createdAt       DateTime      @default(now())
-  available       Boolean       @default(true)
-  accunts         Account[]
-  orders          Order[]
-  products        Product[]
-  users           UserCompany[]
-  notification CompanyNotification[]
+  id                     Int                   @id @default(autoincrement())
+  name                   String
+  slogan                 String
+  logo                   String
+  type                   String
+  plan                   String
+  primary_color          String
+  secondary_color        String
+  createdAt              DateTime              @default(now())
+  available              Boolean               @default(true)
+  address                String?
+  initPlanDate           DateTime?
+  nit                    String?
+  phone                  String?
+  /// Credenciales Factus (AES-256-GCM en base64; ver encryptSecret en secretFields.js)
+  factusClientId         String?
+  factusClientSecret     String?
+  /// Rango de numeración DIAN en Factus (opcional si solo hay un rango activo en Factus)
+  factusNumberingRangeId Int?
+  factusPassword         String?
+  /// Prefijo del rango (p. ej. SETP); informativo / UI; Factus resuelve numeración por numbering_range_id
+  factusPrefix           String?
+  factusUsername         String?
+  hasBilling             Boolean               @default(false)
+  accunts                Account[]
+  notification           CompanyNotification[]
+  orders                 Order[]
+  products               Product[]
+  users                  UserCompany[]
 }
 
 model CompanyNotification {
-  id          Int       @id @default(autoincrement())
-  companyId   Int
-  company     Company   @relation(fields: [companyId], references: [id])
-  title       String
-  message     String
-  type        String     // Ej: STOCK_ALERT, NEW_CLIENT, ORDER_LARGE, INTERNAL_NOTE
-  isRead      Boolean    @default(false)
-  createdAt   DateTime   @default(now())
-  readAt      DateTime?
-  metadata    Json?      // Ej: { productId: "xyz", orderId: "123" }
+  id        Int       @id @default(autoincrement())
+  companyId Int
+  title     String
+  message   String
+  type      String
+  isRead    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+  metadata  Json?
+  company   Company   @relation(fields: [companyId], references: [id])
 }
 
 model Account {
@@ -95,29 +105,36 @@ model Account {
 }
 
 model Product {
-  id            String         @id @default(uuid())
-  name          String
-  barcode       String?
-  description   String?
-  imgUrl        String?
-  price_cost    Float
-  price_selling Float
-  detail        Json?
-  createAt      DateTime       @default(now())
-  is_favorite   Boolean        @default(false)
+  id               String         @id @default(uuid())
+  name             String
+  barcode          String?
+  description      String?
+  imgUrl           String?
+  price_cost       Float
+  price_selling    Float
+  price_before_tax Float?
+  /// IVA %
+  iva_percent      Float          @default(19)
+  /// ICUI %
+  icui_percent     Float          @default(0)
+  /// INC %
+  inc_percent      Float          @default(0)
+  detail           Json?
+  createAt         DateTime       @default(now())
+  is_favorite      Boolean        @default(false)
   /// categoryId    Int?
   /// category      Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  companyId     Int
-  available     Boolean        @default(true)
-  deleteAt      DateTime?
-  manage_stock  Boolean        @default(true)
-  type          String
-  unit          String
-  updatedAt     DateTime       @updatedAt
-  company       Company        @relation(fields: [companyId], references: [id])
-  orders        ProductOrder[]
-  stock_records Stock? 
-  variants      Variant[]
+  companyId        Int
+  available        Boolean        @default(true)
+  deleteAt         DateTime?
+  manage_stock     Boolean        @default(true)
+  type             String
+  unit             String
+  updatedAt        DateTime       @updatedAt
+  company          Company        @relation(fields: [companyId], references: [id])
+  orders           ProductOrder[]
+  stock_records    Stock?
+  variants         Variant[]
 }
 
 model ProductOrder {
@@ -129,7 +146,7 @@ model ProductOrder {
   orderId          String
   product_snapshot Json?
   subtotal         Float?
-  updatedAt   DateTime       @updatedAt
+  updatedAt        DateTime                    @updatedAt
   order            Order                       @relation(fields: [orderId], references: [id])
   product          Product                     @relation(fields: [productId], references: [id])
   selectedOptions  ProductOrderVariantOption[]
@@ -141,7 +158,9 @@ model Order {
   total_price Float
   createAt    DateTime       @default(now())
   companyId   Int
-  detail Json?
+  detail      Json?
+  /// Número de factura electrónica en Factus (ej. SETP990001103), al completar la orden
+  number      String?
   updatedAt   DateTime       @updatedAt
   company     Company        @relation(fields: [companyId], references: [id])
   products    ProductOrder[]
@@ -175,10 +194,10 @@ model ProductOrderVariantOption {
 
 model Stock {
   id        Int      @id @default(autoincrement())
-  productId String  @unique
+  productId String   @unique
   quantity  Int      @default(0)
   type      String?
   reference String?
   createdAt DateTime @default(now())
-  product   Product?  @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
 }

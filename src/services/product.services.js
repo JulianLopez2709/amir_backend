@@ -11,6 +11,10 @@ export const createProductService = async ({
   imgUrl,
   price_cost,
   price_selling,
+  price_before_tax,
+  iva_percent = 19,
+  icui_percent = 0,
+  inc_percent = 0,
   stock = 0,
   available = true,
   detail = {},
@@ -29,6 +33,10 @@ export const createProductService = async ({
         imgUrl,
         price_cost,
         price_selling,
+        price_before_tax,
+        iva_percent,
+        icui_percent,
+        inc_percent,
         available,
         detail,
         type,
@@ -112,48 +120,123 @@ export const getProductsByCompanyService = async (companyId) => {
 };
 
 export const updateProductService = async (productId, data) => {
-    try {
-        // Verificar si el producto existe
-        const existingProduct = await prisma.product.findUnique({
-            where: { id: productId },
-        });
+  try {
 
-        if (!existingProduct) {
-            throw new Error("El producto no existe");
-        }
+    const existingProduct = await prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        variants: {
+          include: {
+            options: true,
+          },
+        },
+      },
+    });
 
-        // Si data.detail existe y es objeto, lo mezclamos con el existente
-        // Ojo: prisma solo hace replace del JSON, no merge profundo por defecto
-        let newDetail = existingProduct.detail;
-        if (data.detail) {
-            newDetail = data.detail; // Asignamos directamente lo nuevo
-        }
-
-        // Preparamos el objeto updateData solo con los campos definidos
-        // Esto evita asignar "undefined" o usar lógica compleja con ??
-        const updateData = {};
-        if (data.name !== undefined) updateData.name = data.name;
-        if (data.barcode !== undefined) updateData.barcode = data.barcode;
-        if (data.description !== undefined) updateData.description = data.description;
-        if (data.imgUrl !== undefined) updateData.imgUrl = data.imgUrl;
-        if (data.price_cost !== undefined) updateData.price_cost = data.price_cost;
-        if (data.price_selling !== undefined) updateData.price_selling = data.price_selling;
-        if (data.available !== undefined) updateData.available = data.available;
-        if (data.detail !== undefined) updateData.detail = newDetail;
-        if (data.type !== undefined) updateData.type = data.type;
-        if (data.unit !== undefined) updateData.unit = data.unit;
-
-        // Actualizar producto
-        const updatedProduct = await prisma.product.update({
-            where: { id: productId },
-            data: updateData,
-        });
-
-        return updatedProduct;
-    } catch (error) {
-        console.error("❌ Error en updateProductService:", error);
-        throw error; // Re-lanzar el error original para ver qué pasa
+    if (!existingProduct) {
+      throw new Error("El producto no existe");
     }
+
+    // =========================
+    // SOLO CAMPOS ENVIADOS
+    // =========================
+
+    const updateData = {};
+
+    const allowedFields = [
+      "name",
+      "barcode",
+      "description",
+      "imgUrl",
+      "price_cost",
+      "price_selling",
+      "price_before_tax",
+      "iva_percent",
+      "icui_percent",
+      "inc_percent",
+      "available",
+      "detail",
+      "type",
+      "unit",
+      "manage_stock",
+      "is_favorite",
+    ];
+
+    allowedFields.forEach((field) => {
+      if (data[field] !== undefined) {
+        updateData[field] = data[field];
+      }
+    });
+
+    // =========================
+    // TRANSACCIÓN
+    // =========================
+
+    const updatedProduct = await prisma.$transaction(async (tx) => {
+
+      // Actualizar producto
+      const product = await tx.product.update({
+        where: {
+          id: productId,
+        },
+        data: updateData,
+      });
+
+      // =========================
+      // VARIANTES
+      // =========================
+
+      if (data.variants) {
+
+        // Borrar variantes viejas
+        await tx.variantOption.deleteMany({
+          where: {
+            variant: {
+              productId,
+            },
+          },
+        });
+
+        await tx.variant.deleteMany({
+          where: {
+            productId,
+          },
+        });
+
+        // Crear nuevas
+        for (const variant of data.variants) {
+
+          const createdVariant = await tx.variant.create({
+            data: {
+              name: variant.name,
+              type: variant.type || "select",
+              productId,
+            },
+          });
+
+          if (variant.options?.length) {
+
+            await tx.variantOption.createMany({
+              data: variant.options.map((option) => ({
+                name: option.name,
+                extraPrice: Number(option.extraPrice || 0),
+                variantId: createdVariant.id,
+              })),
+            });
+
+          }
+        }
+      }
+
+      return product;
+    });
+
+    return updatedProduct;
+
+  } catch (error) {
+    console.error("❌ Error en updateProductService:", error);
+    throw error;
+  }
 };
 
 

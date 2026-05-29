@@ -1,4 +1,4 @@
-import { createCompanyService,getCompanyByUserService } from "../services/company.services.js"
+import { createCompanyService, getCompanyByUserService, updateCompanyFactusSettingsService } from "../services/company.services.js"
 
 export const createCompany = async (req, res) => {
     try {
@@ -18,5 +18,17 @@ export const getCompanyByUser = async (req, res) => {
         res.status(200).send(company)
     } catch (error) {
         res.status(400).send({ message: "Error al encontrar la compañia" })
+    }
+}
+
+export const patchCompanyFactus = async (req, res) => {
+    try {
+        const { companyId } = req.params
+        const updated = await updateCompanyFactusSettingsService(req.userId, companyId, req.body)
+        res.status(200).json(updated)
+    } catch (error) {
+        const msg = error.message || "Error al actualizar Factus"
+        const code = msg.includes("Solo el administrador") ? 403 : 400
+        res.status(code).json({ message: msg })
     }
 }

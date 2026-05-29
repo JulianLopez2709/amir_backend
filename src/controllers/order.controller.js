@@ -87,13 +87,13 @@ export const getOrdersByCompany = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { status } = req.body;
+    const { status, factusBillNumber } = req.body;
 
     if (!orderId || !status) {
       return res.status(400).json({ message: "Debe enviar el ID de la orden y el nuevo estado." });
     }
 
-    const updatedOrder = await updateOrderStatusService(orderId, status);
+    const updatedOrder = await updateOrderStatusService(orderId, status, factusBillNumber);
 
     return res.status(200).json({
       updatedOrder,
