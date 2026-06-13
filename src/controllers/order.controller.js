@@ -1,4 +1,11 @@
-import { createOrderService, getOrderDetailService, getOrdersByCompanyService, updateOrderStatusService, updateOrderService } from "../services/order.services.js";
+import {
+  createOrderService,
+  getOrderDetailService,
+  getOrdersByCompanyService,
+  updateOrderStatusService,
+  updateOrderService,
+} from "../services/order.services.js";
+import { BusinessDateRangeError } from "../utils/businessDateRange.js";
 
 /**
  * Crea una nueva orden 
@@ -75,6 +82,9 @@ export const getOrdersByCompany = async (req, res) => {
 
     return res.status(200).json(orders);
   } catch (error) {
+    if (error instanceof BusinessDateRangeError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
     console.error("❌ Error en getOrdersByCompany:", error.message);
     return res.status(500).json({ message: "Error al obtener las órdenes", error: error.message });
   }

@@ -1,6 +1,10 @@
 import prisma from "../config/db.js";
 import { updateOrder } from "../controllers/order.controller.js";
 import { emitOrderCreated, emitOrderStatusChanged } from "../sockets/emitters/order.emit.js";
+import {
+  buildBusinessDateRange,
+  BusinessDateRangeError,
+} from "../utils/businessDateRange.js";
 
 /**
  * Crea una nueva orden con sus productos asociados y las variales seleccionadas
@@ -199,99 +203,44 @@ export const getOrderDetailService = async (orderId) => {
  */
 export const getOrdersByCompanyService = async (companyId, filter) => {
   try {
-
-    let {
+    const {
       startDate,
       endDate,
       status,
       minPrice,
       maxPrice,
       page = 1,
-      limit = 12
+      limit = 12,
     } = filter;
 
-    page = parseInt(page);
-    limit = parseInt(limit);
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, parseInt(limit, 10) || 12);
 
+    const { startUTC, endUTC } = buildBusinessDateRange({ startDate, endDate });
 
-    // Parseo seguro de fechas
-    const today = new Date();
-    let parsedStart;
-    let parsedEnd;
-
-    if (startDate) {
-      const range = getUTCDateRangeForBusinessDay(startDate);
-      parsedStart = range.startUTC;
-      parsedEnd = range.endUTC;
-    } else {
-      // HOY en Colombia
-      const todayLocal = new Date(
-        new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' })
-      ).toISOString().slice(0, 10); // YYYY-MM-DD
-      const range = getUTCDateRangeForBusinessDay(todayLocal);
-      parsedStart = range.startUTC;
-      parsedEnd = range.endUTC;
-    }
-
-    // Si las fechas vienen inválidas, usar por defecto
-    if (startDate && isNaN(parsedStart)) {
-      console.warn("startDate inválida, usando defaultStart:", startDate);
-      parsedStart = defaultStart;
-    }
-    if (endDate && isNaN(parsedEnd)) {
-      console.warn("endDate inválida, usando defaultEnd:", endDate);
-      parsedEnd = defaultEnd;
-    }
-
-    // Asegurar start <= end
-    if (parsedStart > parsedEnd) {
-      // intercambiar o ajustar end al mismo día de start (decisión de negocio)
-      parsedEnd = new Date(parsedStart);
-      parsedEnd.setHours(23, 59, 59, 999);
-    }
-
-    // Limitar rango a máximo 2 meses desde start
-    const maxRange = new Date(parsedStart);
-    maxRange.setMonth(maxRange.getMonth() + 2);
-    if (parsedEnd > maxRange) {
-      parsedEnd = maxRange;
-    }
-
-    // Construir where de forma condicional (evitar insertar objetos vacíos inválidos)
     const where = {
-      companyId: Number(companyId)
+      companyId: Number(companyId),
+      createAt: {
+        gte: startUTC,
+        lte: endUTC,
+      },
     };
 
-    // Sólo añadir createAt si al menos una fecha es válida
-    if (!isNaN(parsedStart) || !isNaN(parsedEnd)) {
-      where.createAt = {};
-      if (!isNaN(parsedStart)) where.createAt.gte = parsedStart;
-      if (!isNaN(parsedEnd)) where.createAt.lte = parsedEnd;
-    }
-
-    // Filtro por estado
     if (status) {
       where.status = status;
     }
 
-    const example = await prisma.order.findMany({
-      where
-    })
-
-    // Filtro por monto
     if (minPrice || maxPrice) {
       where.total_price = {};
       if (minPrice) where.total_price.gte = parseFloat(minPrice);
       if (maxPrice) where.total_price.lte = parseFloat(maxPrice);
     }
 
-    // Query con includes completos
     const orders = await prisma.order.findMany({
       where,
-      skip: (page - 1) * limit,
-      //take: limit,
+      skip: (pageNum - 1) * limitNum,
+      take: limitNum,
       orderBy: { createAt: "desc" },
-
       include: {
         products: {
           select: {
@@ -301,41 +250,28 @@ export const getOrdersByCompanyService = async (companyId, filter) => {
             notes: true,
             quantity: true,
             product_snapshot: true,
-            //selectedOptions: true
-          }
-        }
-      }
+          },
+        },
+      },
     });
-
 
     const total = await prisma.order.count({ where });
 
     return {
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-      data: orders
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum),
+      data: orders,
     };
   } catch (error) {
+    if (error instanceof BusinessDateRangeError) {
+      throw error;
+    }
     console.error("❌ Error en getOrdersByCompanyService:", error.message);
     throw new Error("No se pudieron obtener las órdenes de la compañía.");
   }
 };
-function getUTCDateRangeForBusinessDay(dateString) {
-  const [year, month, day] = dateString.split('-').map(Number);
-
-  // Colombia UTC-5
-  // 05:00 COL = 10:00 UTC
-  const startUTC = new Date(Date.UTC(year, month - 1, day, 10, 0, 0, 0));
-
-  // 04:59 COL del día siguiente = 09:59 UTC
-  const endUTC = new Date(Date.UTC(year, month - 1, day + 1, 9, 59, 59, 999));
-
-  return { startUTC, endUTC };
-}
-
-
 
 /**
  * @param {string} orderId
