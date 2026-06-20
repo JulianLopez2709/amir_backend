@@ -337,22 +337,38 @@ export const updateOrderStatusService = async (orderId, status, factusBillNumber
 
           await tx.productOrder.update({
             where: { id: item.id },
-            data: { status: "canceled" },
+            data: { status: "cancelled" },
           });
         }
       }
 
-      // 4. Si se confirma, en progreso o completa → actualizar líneas
-      if (status === "confirmed" || status === "in_progress" || status === "completed") {
+      // 4. Confirmar cuenta abierta → productos pendientes pasan a servidos
+      if (status === "in_progress") {
         for (const item of order.products) {
-          await tx.productOrder.update({
-            where: { id: item.id },
-            data: { status },
-          });
+          if (item.status === "pending" || item.status === "new") {
+            await tx.productOrder.update({
+              where: { id: item.id },
+              data: { status: "served" },
+            });
+          }
         }
       }
 
-      // 5.CONSULTAR LA ORDEN YA ACTUALIZADA
+      // 5. Cerrar mesa → validar que todo esté pagado o cancelado
+      if (status === "completed") {
+        const canClose = order.products.every(
+          (item) =>
+            item.status === "paid" ||
+            item.status === "cancelled" ||
+            item.status === "canceled"
+        );
+
+        if (!canClose) {
+          throw new Error(
+            "No se puede cerrar la mesa: hay productos pendientes o servidos sin cobrar."
+          );
+        }
+      }
       const finalOrder = await tx.order.findUnique({
         where: { id: orderId },
         select: {
@@ -379,6 +395,83 @@ export const updateOrderStatusService = async (orderId, status, factusBillNumber
   } catch (error) {
     console.error("❌ Error en updateOrderStatusService:", error.message);
     throw new Error("No se pudo actualizar el estado de la orden.");
+  }
+};
+
+/**
+ * Marca como pagados los productos servidos de una cuenta abierta.
+ * @param {string} orderId
+ * @param {number[] | undefined} productIds Si se omite, cobra todos los servidos.
+ */
+export const payOrderProductsService = async (orderId, productIds) => {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        products: {
+          select: {
+            id: true,
+            status: true,
+            quantity: true,
+            subtotal: true,
+            notes: true,
+            product_snapshot: true,
+          },
+        },
+      },
+    });
+
+    if (!order) throw new Error("Orden no encontrada");
+
+    if (order.status !== "in_progress") {
+      throw new Error("Solo se pueden cobrar productos de cuentas abiertas.");
+    }
+
+    const servedProducts = order.products.filter(
+      (item) => item.status === "served" || item.status === "in_progress"
+    );
+
+    const idsToPay = productIds?.length
+      ? servedProducts
+          .filter((item) => productIds.includes(item.id))
+          .map((item) => item.id)
+      : servedProducts.map((item) => item.id);
+
+    if (idsToPay.length === 0) {
+      throw new Error("No hay productos servidos pendientes de cobro.");
+    }
+
+    await prisma.productOrder.updateMany({
+      where: { id: { in: idsToPay } },
+      data: { status: "paid" },
+    });
+
+    const updatedOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        products: {
+          select: {
+            id: true,
+            status: true,
+            quantity: true,
+            subtotal: true,
+            notes: true,
+            product_snapshot: true,
+          },
+        },
+      },
+    });
+
+    emitOrderStatusChanged(order.companyId, {
+      orderId,
+      status: order.status,
+      action: "products_paid",
+    });
+
+    return updatedOrder;
+  } catch (error) {
+    console.error("❌ Error en payOrderProductsService:", error.message);
+    throw error;
   }
 };
 
@@ -534,12 +627,13 @@ export const updateOrderService = async (orderId, data) => {
         // ------------------------------------------------------------
         const newProductOrder = await prisma.productOrder.create({
           data: {
-            status: "new",
+            status: existingOrder.status === "in_progress" ? "served" : "pending",
             orderId,
             productId,
             quantity,
             notes,
-            product_snapshot: snapshot
+            product_snapshot: snapshot,
+            subtotal: snapshot.price * quantity + fullSnapshotOptions.reduce((acc, o) => acc + (o.extraPrice || 0), 0) * quantity,
           }
         });
 

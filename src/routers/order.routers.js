@@ -4,7 +4,8 @@ import {
   getOrdersByCompany,
   getOrderDetail,
   updateOrderStatus,
-  updateOrder
+  updateOrder,
+  payOrderProducts,
 } from "../controllers/order.controller.js";
 
 const router = Router();
@@ -20,6 +21,7 @@ router.get("/:orderId", getOrderDetail);
 
 // 🧾 Actualizar estado de una orden
 router.patch("/:orderId/status", updateOrderStatus);
+router.patch("/:orderId/pay", payOrderProducts);
 router.put("/:orderId", updateOrder);
 
 router.get("/company/:companyId", getOrdersByCompany);

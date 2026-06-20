@@ -4,6 +4,7 @@ import {
   getOrdersByCompanyService,
   updateOrderStatusService,
   updateOrderService,
+  payOrderProductsService,
 } from "../services/order.services.js";
 import { BusinessDateRangeError } from "../utils/businessDateRange.js";
 
@@ -106,6 +107,24 @@ export const updateOrderStatus = async (req, res) => {
   } catch (error) {
     console.error("❌ Error en updateOrderStatus:", error.message);
     return res.status(500).json({ message: "Error al actualizar la orden", error: error.message });
+  }
+};
+
+export const payOrderProducts = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { productIds } = req.body ?? {};
+
+    if (!orderId) {
+      return res.status(400).json({ message: "Debe enviar el ID de la orden." });
+    }
+
+    const updatedOrder = await payOrderProductsService(orderId, productIds);
+
+    return res.status(200).json(updatedOrder);
+  } catch (error) {
+    console.error("❌ Error en payOrderProducts:", error.message);
+    return res.status(400).json({ message: error.message || "Error al cobrar productos" });
   }
 };
 
