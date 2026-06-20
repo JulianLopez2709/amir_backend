@@ -4,6 +4,7 @@ import { emitOrderCreated, emitOrderStatusChanged } from "../sockets/emitters/or
 import {
   buildBusinessDateRange,
   BusinessDateRangeError,
+  getCurrentBusinessDayColombia,
 } from "../utils/businessDateRange.js";
 
 /**
@@ -216,7 +217,8 @@ export const getOrdersByCompanyService = async (companyId, filter) => {
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.max(1, parseInt(limit, 10) || 12);
 
-    const { startUTC, endUTC } = buildBusinessDateRange({ startDate, endDate });
+    const { startUTC, endUTC, startDate: appliedStartDate, endDate: appliedEndDate } =
+      buildBusinessDateRange({ startDate, endDate });
 
     const where = {
       companyId: Number(companyId),
@@ -261,7 +263,10 @@ export const getOrdersByCompanyService = async (companyId, filter) => {
       total,
       page: pageNum,
       limit: limitNum,
-      totalPages: Math.ceil(total / limitNum),
+      totalPages: Math.ceil(total / limitNum) || 1,
+      operationalDate: getCurrentBusinessDayColombia(),
+      appliedStartDate,
+      appliedEndDate,
       data: orders,
     };
   } catch (error) {

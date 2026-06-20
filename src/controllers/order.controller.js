@@ -75,11 +75,6 @@ export const getOrdersByCompany = async (req, res) => {
     };
 
     const orders = await getOrdersByCompanyService(parseInt(companyId), filters);
-    if (!orders || orders.data.length === 0) {
-      return res.status(404).json({ message: "No se encontraron órdenes para esta compañía." });
-    }
-
-
     return res.status(200).json(orders);
   } catch (error) {
     if (error instanceof BusinessDateRangeError) {
