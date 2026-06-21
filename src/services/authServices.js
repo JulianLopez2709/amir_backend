@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db.js';
 import { generateToken } from '../middleware/auth.js';
+import { toPublicCompany } from '../utils/companyPublic.js';
 
 export const loginService = async (identifier, password) => {
     try {
@@ -79,7 +80,7 @@ export const selectCompanyService = async (userId, companyId) => {
     return {
         message: "Compañía seleccionada correctamente",
         company: {
-            ...relation.company,
+            ...toPublicCompany(relation.company),
             role: relation.role
         },
         token

@@ -34,6 +34,7 @@ function resolvePdfFileName(fileName, billNumber) {
 export const postValidateBill = async (req, res) => {
   try {
     const { companyId, ...payload } = req.body;
+
     if (companyId == null) {
       return res.status(400).json({ message: "companyId es obligatorio" });
     }
@@ -42,7 +43,13 @@ export const postValidateBill = async (req, res) => {
     }
 
     const company = await loadCompanyForFactus(req.userId, companyId);
-    const { ok, status, data } = await validateBillForCompany(Number(companyId), company, payload);
+
+    const billPayload = { ...payload };
+    if (billPayload.numbering_range_id == null && company.factusNumberingRangeId != null) {
+      billPayload.numbering_range_id = company.factusNumberingRangeId;
+    }
+
+    const { ok, status, data } = await validateBillForCompany(Number(companyId), company, billPayload);
 
     if (!ok) {
       return res.status(status >= 400 ? status : 502).json(data);

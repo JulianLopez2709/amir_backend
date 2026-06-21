@@ -72,6 +72,7 @@ model Company {
   factusPrefix           String?
   factusUsername         String?
   hasBilling             Boolean               @default(false)
+  email                  String?
   accunts                Account[]
   notification           CompanyNotification[]
   orders                 Order[]
@@ -112,13 +113,6 @@ model Product {
   imgUrl           String?
   price_cost       Float
   price_selling    Float
-  price_before_tax Float?
-  /// IVA %
-  iva_percent      Float          @default(19)
-  /// ICUI %
-  icui_percent     Float          @default(0)
-  /// INC %
-  inc_percent      Float          @default(0)
   detail           Json?
   createAt         DateTime       @default(now())
   is_favorite      Boolean        @default(false)
@@ -131,6 +125,13 @@ model Product {
   type             String
   unit             String
   updatedAt        DateTime       @updatedAt
+  /// ICUI %
+  icui_percent     Float          @default(0)
+  /// INC %
+  inc_percent      Float          @default(0)
+  /// IVA %
+  iva_percent      Float          @default(19)
+  price_before_tax Float?
   company          Company        @relation(fields: [companyId], references: [id])
   orders           ProductOrder[]
   stock_records    Stock?
@@ -159,9 +160,9 @@ model Order {
   createAt    DateTime       @default(now())
   companyId   Int
   detail      Json?
+  updatedAt   DateTime       @updatedAt
   /// Número de factura electrónica en Factus (ej. SETP990001103), al completar la orden
   number      String?
-  updatedAt   DateTime       @updatedAt
   company     Company        @relation(fields: [companyId], references: [id])
   products    ProductOrder[]
 }
