@@ -28,6 +28,7 @@ export const createOrderService = async ({ companyId, products, detail }) => {
         detail,
         status: "pending",
         total_price: 0,
+        table: detail?.selectedTable || null,
       },
     });
 

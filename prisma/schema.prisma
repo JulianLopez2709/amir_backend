@@ -73,6 +73,7 @@ model Company {
   factusUsername         String?
   hasBilling             Boolean               @default(false)
   email                  String?
+  numTable               String?
   accunts                Account[]
   notification           CompanyNotification[]
   orders                 Order[]
@@ -159,6 +160,7 @@ model Order {
   total_price Float
   createAt    DateTime       @default(now())
   companyId   Int
+  table       String?
   detail      Json?
   updatedAt   DateTime       @updatedAt
   /// Número de factura electrónica en Factus (ej. SETP990001103), al completar la orden

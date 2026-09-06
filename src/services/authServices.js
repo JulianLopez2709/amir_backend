@@ -20,7 +20,8 @@ export const loginService = async (identifier, password) => {
                                 id: true,
                                 logo: true,
                                 name: true,
-                                hasBilling: true
+                                hasBilling: true,
+                                numTable: true
                             }
                         }
                     }
@@ -31,7 +32,6 @@ export const loginService = async (identifier, password) => {
                 }
             }
         });
-
 
         if (!user) throw new Error('User not found');
         const isPasswordValid = await bcrypt.compare(password, user.password)
@@ -50,6 +50,7 @@ export const loginService = async (identifier, password) => {
                 logo: c.company.logo,
                 available: c.available,
                 hasBilling: c.company.hasBilling,
+                numTable: c.company.numTable,
                 name: c.company.name,
                 role: c.role
             })),
